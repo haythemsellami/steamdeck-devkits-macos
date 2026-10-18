@@ -53,7 +53,9 @@ def test_resolve_hostname_with_dot(core: DevkitCore) -> None:
     assert resolved.added_via == "explicit"
 
 
-def test_resolve_unknown_name_fails(core: DevkitCore) -> None:
+def test_resolve_unknown_name_fails(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Keep mDNS out of unit tests: simulate a discovery miss.
+    monkeypatch.setattr("steamos_devkit.discovery.resolve_name", lambda *a, **kw: None)
     with pytest.raises(DevkitError) as exc_info:
         resolve_device(core, "livingroom")
     assert exc_info.value.code == ErrorCode.DEVICE_NOT_FOUND
