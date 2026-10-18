@@ -59,6 +59,15 @@ def resolve_device(core: DevkitCore, selector: str) -> Device:
             login="deck",
             added_via="explicit",
         )
+    # Bare name: last resort is an mDNS lookup (spec section 8, "discover-
+    # capable contexts"). A lookup that found nothing falls through to
+    # DEVICE_NOT_FOUND; a discovery infrastructure failure (e.g. blocked Local
+    # Network permission) propagates as its own DevkitError.
+    from steamos_devkit import discovery
+
+    resolved = discovery.resolve_name(core, selector)
+    if resolved is not None:
+        return resolved
     raise DevkitError(
         ErrorCode.DEVICE_NOT_FOUND,
         f"unknown device {selector!r}; run `devkit discover`/`devkit pair` or use an IP address",
