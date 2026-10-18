@@ -31,6 +31,7 @@ class ErrorCode(StrEnum):
     JOB_NOT_FOUND = "JOB_NOT_FOUND"
     ARTIFACT_NOT_FOUND = "ARTIFACT_NOT_FOUND"
     STATE_CORRUPT = "STATE_CORRUPT"
+    INTERNAL = "INTERNAL"
 
 
 class DevkitError(Exception):

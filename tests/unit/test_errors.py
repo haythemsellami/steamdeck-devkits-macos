@@ -23,6 +23,8 @@ SPEC_CODES = (
     "JOB_NOT_FOUND",
     "ARTIFACT_NOT_FOUND",
     "STATE_CORRUPT",
+    # Appendix A delta: unexpected internal failures, mapped to exit 1.
+    "INTERNAL",
 )
 
 

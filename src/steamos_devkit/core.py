@@ -5,18 +5,25 @@ raises a bare exception across the boundary, or reads process-global state.
 Only milestone-M0 surfaces are implemented; later milestones add the rest.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import platform
 import sys
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamos_devkit import constants
 from steamos_devkit.adapters import HostAdapter, get_adapter
 from steamos_devkit.config import StateStore, resolve_state_dir
 from steamos_devkit.errors import DevkitError, ErrorCode
-from steamos_devkit.models import DoctorCheck, DoctorReport, RsyncInfo
+from steamos_devkit.models import Device, DoctorCheck, DoctorReport, RsyncInfo
+
+if TYPE_CHECKING:
+    from steamos_devkit.device import DeviceHandle
+    from steamos_devkit.jobs import JobRunner, JobStore
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +42,8 @@ class DevkitCore:
     def __init__(self, state_dir: Path | None = None, adapter: HostAdapter | None = None) -> None:
         self._adapter: HostAdapter = adapter if adapter is not None else get_adapter()
         self._state = StateStore(resolve_state_dir(state_dir, default=self._adapter.state_dir()))
+        self._job_store: JobStore | None = None
+        self._job_runner: JobRunner | None = None
 
     @property
     def adapter(self) -> HostAdapter:
@@ -158,6 +167,32 @@ class DevkitCore:
         return DoctorCheck(
             name="terminal", status="ok", summary=f"interactive shells via {terminal}"
         )
+
+    # -- shared substrate (wired by the integrator; feature modules build on these) ---
+
+    @property
+    def job_store(self) -> JobStore:
+        if self._job_store is None:
+            self._state.ensure_layout()
+            self._job_store = JobStore(self._state.jobs_dir)
+        return self._job_store
+
+    @property
+    def job_runner(self) -> JobRunner:
+        """The shared runner; first construction runs the recovery sweep."""
+        if self._job_runner is None:
+            self._job_runner = JobRunner(self.job_store)
+        return self._job_runner
+
+    def resolve_device(self, selector: str) -> Device:
+        from steamos_devkit.device import resolve_device
+
+        return resolve_device(self, selector)
+
+    def device_handle(self, selector: str) -> DeviceHandle:
+        from steamos_devkit.device import DeviceHandle
+
+        return DeviceHandle.for_selector(self, selector)
 
 
 __all__ = ["DevkitCore", "DevkitError", "ErrorCode"]
