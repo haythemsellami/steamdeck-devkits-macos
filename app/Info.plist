@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleName</key>
+	<string>DevkitSpike</string>
+	<key>CFBundleDisplayName</key>
+	<string>DevkitSpike</string>
+	<key>CFBundleExecutable</key>
+	<string>DevkitSpike</string>
+	<key>CFBundleIdentifier</key>
+	<string>dev.steamosdevkit.mac</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Discovers Steam Decks running the SteamOS Devkit service on your local network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_steamos-devkit._tcp</string>
+	</array>
+</dict>
+</plist>
