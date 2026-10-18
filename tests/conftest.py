@@ -7,12 +7,16 @@ before the package under test exists, and must never import ``steamos_devkit``
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+# Make the fake-SSH harness importable from any test module (import fake_ssh).
+sys.path.insert(0, str(Path(__file__).resolve().parent / "integration"))
 
 
 @pytest.fixture

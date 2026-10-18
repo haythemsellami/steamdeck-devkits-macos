@@ -49,3 +49,8 @@ def load_devkit_client() -> ModuleType:
 def upstream_commit() -> str:
     """The pinned upstream sha this snapshot was taken from."""
     return (_VENDOR_DIR / "UPSTREAM_COMMIT").read_text(encoding="utf-8").strip()
+
+
+def utils_dir() -> Path:
+    """The vendored device-side helper tree (uploaded to ~/devkit-utils)."""
+    return _VENDOR_DIR / "devkit-utils"
