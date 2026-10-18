@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -20,14 +21,21 @@ _DEVICE_ENV_VAR = "DEVKIT_TEST_DEVICE"
 TEST_GAMEID = "zz_devkit_test"
 
 
+_HARDWARE_DIR = Path(__file__).resolve().parent
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    # This conftest lives in tests/hardware but pytest applies directory
+    # conftest hooks to every item collected under the rootdir invocation,
+    # so scope the skip explicitly to items collected from this directory.
     if os.environ.get(_DEVICE_ENV_VAR):
         return
     skip = pytest.mark.skip(
         reason=f"{_DEVICE_ENV_VAR} not set; hardware tests only run against an explicit device"
     )
     for item in items:
-        item.add_marker(skip)
+        if Path(str(item.fspath)).resolve().is_relative_to(_HARDWARE_DIR):
+            item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")
