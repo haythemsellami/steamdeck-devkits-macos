@@ -27,7 +27,7 @@ Hardware tests: `tests/hardware/` runs only when `DEVKIT_TEST_DEVICE=<name-or-ip
 
 ## Repo layout
 
-- `src/steamos_devkit/` — package (`core.py`, `models.py`, `errors.py`, `config.py`, `constants.py`, `jobs/`, `adapters/`, `cli.py`, `mcp_server.py`, `_vendor/`)
+- `src/steamos_devkit/` — package (`core.py`, `models.py`, `errors.py`, `config.py`, `constants.py`, `device.py`, `artifacts.py`, `jobs/`, `adapters/`, `cli/`, `mcp_server.py` (M4), `_vendor/`)
 - `tests/` — `unit/`, `integration/` (fake-SSH harness), `hardware/`, `fixtures/` (golden files)
 - `scripts/` — `sync-upstream.sh`, `run-gates.sh`, packaging/notarization scripts
 - `app/` — SwiftUI GUI + packaging (from M7; spike scaffolding from M0.5)
@@ -42,3 +42,9 @@ Hardware tests: `tests/hardware/` runs only when `DEVKIT_TEST_DEVICE=<name-or-ip
 - Testing: pytest; CLI via `typer.testing.CliRunner`; MCP via FastMCP in-process client; SSH via the fake harness in `tests/integration/` — no real device contact in unit/integration tests.
 - When multiple agents work concurrently: stage only files you own, and wrap every `git add`/`git commit` in a retry loop (up to 30 s) to ride out `index.lock` contention.
 - Keep `docs/` in sync with behavior in the same commit; update this file when structure, commands, or conventions change.
+
+## Parallel-work conventions (multiple agents share this tree)
+
+- **Feature modules** (`discovery.py`, `titles.py`, `diagnostics.py`, …) expose functions taking `core: DevkitCore` as the first parameter. `DevkitCore` itself stays thin; the integrator wires delegates. Do not add methods to `core.py` from feature work.
+- **Shared substrate owned by the integrator** (don't restructure it in feature work; report gaps instead): `core.py`, `device.py` (`resolve_device`, `DeviceHandle` paramiko substrate), `jobs/` (`JobStore`, `JobRunner`, `JobContext`; store method is `list_jobs`), `artifacts.py`, `cli/common.py`, `cli/__init__.py` (except the marked registration section).
+- **CLI commands** live in `cli/<area>.py` modules exposing `register(app: typer.Typer)`. Wire them by appending one import + one `register(app)` line inside the marked section of `cli/__init__.py` — append-only, never reorder. If an Edit anchor fails because another agent appended first, re-read and retry.

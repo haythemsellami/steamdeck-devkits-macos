@@ -521,3 +521,9 @@ Emulator, SteamOS fork, game manager, reverse engineering, automatic optimizatio
 - §4: the upstream gameid regex requires ≥ 2 characters; single-char gameids are rejected (upstream-faithful).
 - D4: rsync GPLv3 attribution + source-offer notice is required before M8 distribution (tracked in `docs/packaging-spike.md`).
 - Hardware conftest scopes its skip marker to `tests/hardware/` only (a session-wide hook must not skip the whole suite).
+- §2.1: `cli.py` is the `cli/` package — `common.py` (shared machinery), `meta.py` (doctor/version), one module per command area exposing `register(app)`, wired append-only in `cli/__init__.py`.
+- §8 convention: feature modules expose functions taking `core: DevkitCore` as the first parameter; `DevkitCore` delegate methods are wired by the integrator. Shared substrate (owned by the integrator): `device.py` (`resolve_device`/`DeviceHandle`), `jobs/` (`JobStore.list_jobs`, `JobRunner`, `JobContext`), `artifacts.py`.
+- §6/§10: `INTERNAL` error code added (unexpected job failures), CLI exit 1.
+- §7.3: the itemize parser must treat `cd+++++++++` (directory creation) as an entry; only `>`/`<` leaders are transfers otherwise.
+- rsync progress2 records are `\r`-separated; parsers split on both `\r` and `\n`.
+- `types-paramiko` added as a dev dependency (paramiko ships no py.typed).
