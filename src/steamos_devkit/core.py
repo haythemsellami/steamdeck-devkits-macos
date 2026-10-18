@@ -19,11 +19,11 @@ from steamos_devkit import constants
 from steamos_devkit.adapters import HostAdapter, get_adapter
 from steamos_devkit.config import StateStore, resolve_state_dir
 from steamos_devkit.errors import DevkitError, ErrorCode
+from steamos_devkit.jobs import JobRunner, JobStore
 from steamos_devkit.models import Device, DoctorCheck, DoctorReport, RsyncInfo
 
 if TYPE_CHECKING:
     from steamos_devkit.device import DeviceHandle
-    from steamos_devkit.jobs import JobRunner, JobStore
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +172,8 @@ class DevkitCore:
 
     @property
     def job_store(self) -> JobStore:
+        from steamos_devkit.jobs import JobStore
+
         if self._job_store is None:
             self._state.ensure_layout()
             self._job_store = JobStore(self._state.jobs_dir)
@@ -180,6 +182,8 @@ class DevkitCore:
     @property
     def job_runner(self) -> JobRunner:
         """The shared runner; first construction runs the recovery sweep."""
+        from steamos_devkit.jobs import JobRunner
+
         if self._job_runner is None:
             self._job_runner = JobRunner(self.job_store)
         return self._job_runner
