@@ -10,6 +10,7 @@ from enum import StrEnum
 from ipaddress import IPv4Address
 from pathlib import Path
 from typing import Annotated, Literal
+import warnings
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
@@ -116,26 +117,36 @@ class FilterSpec(BaseModel):
     patterns: list[str] = Field(default_factory=list)
 
 
-class DeploySpec(BaseModel):
-    """Inputs for one deploy (spec sections 5 and 8)."""
+# pydantic 2.14 added BaseModel.register(); the spec-frozen field name
+# DeploySpec.register (spec section 5) shadows it. The name is contractual, so
+# the import-time shadow warning is suppressed exactly at this class.
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message='Field name "register" in "DeploySpec" shadows an attribute',
+        category=UserWarning,
+    )
 
-    device: DeviceSelector
-    gameid: GameId
-    source_dir: Path
-    filters: FilterSpec = Field(default_factory=FilterSpec)
-    clean: bool = False  # --delete --delete-excluded --delete-delay
-    checksum: bool = False  # --checksum (mutually exclusive with update)
-    update: bool = False  # --update
-    compress: bool = True  # -z
-    register: bool = True  # run steam-client-create-shortcut after upload
-    launch: bool = False  # run-game after successful register
-    config: TitleConfig | None = None  # applied before register
+    class DeploySpec(BaseModel):
+        """Inputs for one deploy (spec sections 5 and 8)."""
 
-    @model_validator(mode="after")
-    def _checksum_and_update_are_exclusive(self) -> "DeploySpec":
-        if self.checksum and self.update:
-            raise ValueError("checksum and update are mutually exclusive")
-        return self
+        device: DeviceSelector
+        gameid: GameId
+        source_dir: Path
+        filters: FilterSpec = Field(default_factory=FilterSpec)
+        clean: bool = False  # --delete --delete-excluded --delete-delay
+        checksum: bool = False  # --checksum (mutually exclusive with update)
+        update: bool = False  # --update
+        compress: bool = True  # -z
+        register: bool = True  # run steam-client-create-shortcut after upload
+        launch: bool = False  # run-game after successful register
+        config: TitleConfig | None = None  # applied before register
+
+        @model_validator(mode="after")
+        def _checksum_and_update_are_exclusive(self) -> "DeploySpec":
+            if self.checksum and self.update:
+                raise ValueError("checksum and update are mutually exclusive")
+            return self
 
 
 class DeployPreview(BaseModel):
@@ -187,15 +198,18 @@ class LaunchResult(BaseModel):
 HostContext = Literal["cli", "bundled_app", "mcp_stdio"]
 """Process context detected by the host adapter (spec section 12)."""
 
+RsyncFlavor = Literal["rsync", "openrsync", "unknown"]
+RsyncSource = Literal["env", "bundled", "homebrew", "cygwin", "path", "none"]
+
 
 class RsyncInfo(BaseModel):
     """Probe result for one rsync candidate (spec sections 9 and 12)."""
 
     path: Path | None = None
-    flavor: Literal["rsync", "openrsync", "unknown"] | None = None
+    flavor: RsyncFlavor | None = None
     version: str | None = None
     protocol_version: int | None = None
-    source: Literal["env", "bundled", "homebrew", "cygwin", "path", "none"] = "none"
+    source: RsyncSource = "none"
     ok: bool = False
     """True only for real rsync with protocol >= 30; openrsync never qualifies."""
     message: str | None = None

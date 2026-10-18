@@ -5,6 +5,8 @@ The legacy pickle is parsed read-only, only behind an explicit flag — pickle
 loading is code execution and never happens automatically.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os

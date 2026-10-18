@@ -19,6 +19,12 @@ GUI_BUNDLE_ID: Final = "dev.steamosdevkit.mac"
 
 # --- State layout (spec section 3) ------------------------------------------
 STATE_DIR_ENV_VAR: Final = "DEVKIT_STATE_DIR"
+
+# --- Host dependency overrides (spec section 12) -----------------------------
+RSYNC_ENV_VAR: Final = "DEVKIT_RSYNC"
+SSH_ENV_VAR: Final = "DEVKIT_SSH"
+# Set by the MCP server (M4) so adapters can tell mcp_stdio from cli.
+CONTEXT_ENV_VAR: Final = "DEVKIT_CONTEXT"
 SETTINGS_FILENAME: Final = "settings.json"
 DEVICES_FILENAME: Final = "devices.json"
 LAST_DEVICE_FILENAME: Final = "last_device"
