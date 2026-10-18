@@ -39,10 +39,16 @@ packages = ["src/steamos_devkit"]
 target-version = "py311"
 line-length = 100
 src = ["src", "tests"]
-extend-exclude = ["src/steamos_devkit/_vendor"]
+# _vendor is upstream's code (never linted); docs markdown contains
+# illustrative snippets, not runnable project code.
+extend-exclude = ["src/steamos_devkit/_vendor", "docs"]
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "UP", "W"]
+
+[tool.ruff.lint.flake8-bugbear]
+# typer's API is Option/Argument calls in parameter defaults by design.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["steamos_devkit"]
@@ -53,6 +59,10 @@ strict = true
 pretty = true
 show_error_codes = true
 warn_unreachable = true
+# The vendored snapshot is upstream's code (untyped, dash-containing dirs break
+# dotted module names) — never analyzed. The module override below stays as a
+# second layer for anything importable as steamos_devkit._vendor.*.
+exclude = "^src/steamos_devkit/_vendor/"
 
 [[tool.mypy.overrides]]
 module = ["steamos_devkit._vendor.*"]

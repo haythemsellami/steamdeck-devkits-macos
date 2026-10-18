@@ -13,6 +13,7 @@ from steamos_devkit import constants
 from steamos_devkit.adapters.base import (
     detect_context,
     path_scan,
+    probe_rsync,
     probe_rsync_candidates,
     ssh_version,
     which_path,
@@ -30,12 +31,7 @@ TERMINAL_SEARCH_LIST: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 
 def _rsync_candidates() -> list[tuple[Path, RsyncSource]]:
-    candidates: list[tuple[Path, RsyncSource]] = []
-    env = os.environ.get(constants.RSYNC_ENV_VAR)
-    if env:
-        candidates.append((Path(env).expanduser(), "env"))
-    candidates.extend((p, "path") for p in path_scan("rsync"))
-    return candidates
+    return [(p, "path") for p in path_scan("rsync")]
 
 
 class LinuxAdapter:
@@ -46,6 +42,10 @@ class LinuxAdapter:
         return platform_default_state_dir()
 
     def rsync(self) -> RsyncInfo:
+        env = os.environ.get(constants.RSYNC_ENV_VAR)
+        if env:
+            # An explicit override is authoritative (see macos.py).
+            return probe_rsync(Path(env).expanduser(), "env")
         return probe_rsync_candidates(_rsync_candidates())
 
     def ssh(self) -> Path:
@@ -86,9 +86,7 @@ class LinuxAdapter:
             try:
                 return subprocess.Popen([str(resolved), *prefix, *cmd])
             except OSError as e:
-                raise DevkitError(
-                    ErrorCode.DEPENDENCY_MISSING, f"cannot launch {name}: {e}"
-                ) from e
+                raise DevkitError(ErrorCode.DEPENDENCY_MISSING, f"cannot launch {name}: {e}") from e
         searched = ", ".join(name for name, _ in TERMINAL_SEARCH_LIST)
         raise DevkitError(
             ErrorCode.DEPENDENCY_MISSING,

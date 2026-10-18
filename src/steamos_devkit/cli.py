@@ -74,6 +74,11 @@ class _Options:
     verbose: bool
 
 
+def _stdout_is_tty() -> bool:
+    """Isolated for tests: CliRunner's captured stdout is never a TTY."""
+    return sys.stdout.isatty()
+
+
 @app.callback()
 def _callback(
     ctx: typer.Context,
@@ -87,7 +92,7 @@ def _callback(
     ),
     verbose: bool = typer.Option(False, "--verbose", help="Debug logging on stderr."),
 ) -> None:
-    json_mode = json_output or not sys.stdout.isatty()
+    json_mode = json_output or not _stdout_is_tty()
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.WARNING,
         stream=sys.stderr,
@@ -185,7 +190,7 @@ def main() -> None:
     try:
         app()
     except DevkitError as err:
-        json_mode = "--json" in sys.argv[1:] or not sys.stdout.isatty()
+        json_mode = "--json" in sys.argv[1:] or not _stdout_is_tty()
         if json_mode:
             from steamos_devkit.models import Result
 

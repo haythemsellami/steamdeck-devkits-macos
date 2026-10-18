@@ -17,6 +17,7 @@ from steamos_devkit import constants
 from steamos_devkit.adapters.base import (
     detect_context,
     path_scan,
+    probe_rsync,
     probe_rsync_candidates,
     ssh_version,
     which_path,
@@ -89,10 +90,11 @@ class WindowsAdapter:
         return candidate if candidate.is_file() else None
 
     def rsync(self) -> RsyncInfo:
-        candidates: list[tuple[Path, RsyncSource]] = []
         env = os.environ.get(constants.RSYNC_ENV_VAR)
         if env:
-            candidates.append((Path(env).expanduser(), "env"))
+            # An explicit override is authoritative (see macos.py).
+            return probe_rsync(Path(env).expanduser(), "env")
+        candidates: list[tuple[Path, RsyncSource]] = []
         try:
             cygwin = self._cygwin_tool("rsync.exe")
         except DevkitError:

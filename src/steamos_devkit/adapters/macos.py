@@ -16,6 +16,7 @@ from steamos_devkit import constants
 from steamos_devkit.adapters.base import (
     detect_context,
     path_scan,
+    probe_rsync,
     probe_rsync_candidates,
     ssh_version,
 )
@@ -42,9 +43,6 @@ def _bundled_rsync() -> Path | None:
 
 def _rsync_candidates() -> list[tuple[Path, RsyncSource]]:
     candidates: list[tuple[Path, RsyncSource]] = []
-    env = os.environ.get(constants.RSYNC_ENV_VAR)
-    if env:
-        candidates.append((Path(env).expanduser(), "env"))
     bundled = _bundled_rsync()
     if bundled is not None:
         candidates.append((bundled, "bundled"))
@@ -66,6 +64,14 @@ def _applescript_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _iterm_installed() -> bool:
+    return _ITERM_APP.is_dir()
+
+
+def _filezilla_installed() -> bool:
+    return _FILEZILLA_APP.is_dir()
+
+
 class MacOSAdapter:
     """Darwin implementation of the HostAdapter protocol."""
 
@@ -73,6 +79,11 @@ class MacOSAdapter:
         return platform_default_state_dir()
 
     def rsync(self) -> RsyncInfo:
+        env = os.environ.get(constants.RSYNC_ENV_VAR)
+        if env:
+            # An explicit override is authoritative: a broken one must not be
+            # silently ignored in favor of a fallback.
+            return probe_rsync(Path(env).expanduser(), "env")
         return probe_rsync_candidates(_rsync_candidates())
 
     def ssh(self) -> Path:
@@ -101,19 +112,14 @@ class MacOSAdapter:
     def terminal_launch(self, cmd: list[str]) -> subprocess.Popen[bytes]:
         """Run cmd in a new iTerm2 window if installed, else Terminal.app."""
         command = _applescript_escape(shlex.join(cmd))
-        if _ITERM_APP.is_dir():
+        if _iterm_installed():
             script = (
                 'tell application "iTerm"\n'
                 f'  create window with default profile command "{command}"\n'
                 "end tell"
             )
         else:
-            script = (
-                'tell application "Terminal"\n'
-                f'  do script "{command}"\n'
-                "  activate\n"
-                "end tell"
-            )
+            script = f'tell application "Terminal"\n  do script "{command}"\n  activate\nend tell'
         try:
             return subprocess.Popen([str(_OSASCRIPT), "-e", script])
         except OSError as e:
@@ -124,13 +130,13 @@ class MacOSAdapter:
 
     def discover_tools(self) -> ToolAvailability:
         ssh_path = self.ssh()
-        terminal = "iTerm2" if _ITERM_APP.is_dir() else "Terminal.app"
+        terminal = "iTerm2" if _iterm_installed() else "Terminal.app"
         return ToolAvailability(
             rsync=self.rsync(),
             ssh_path=ssh_path if ssh_path.is_file() else None,
             ssh_version=ssh_version(ssh_path) if ssh_path.is_file() else None,
             terminal=terminal,
-            filezilla=_FILEZILLA_APP if _FILEZILLA_APP.is_dir() else None,
+            filezilla=_FILEZILLA_APP if _filezilla_installed() else None,
         )
 
     def context(self) -> HostContext:
