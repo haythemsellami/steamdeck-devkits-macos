@@ -246,6 +246,15 @@ wheels = [
 ]
 
 [[package]]
+name = "contexter"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/8e/fa97d40616c8d1bda8f83b12ab0ccf9fe0420cb89cf73184436bd3c581fe/contexter-0.1.4.tar.gz", hash = "sha256:c730890b1a915051414a6350d8ea1cddca7d01d8f756badedb30b9bf305ea0a8", size = 4548, upload-time = "2017-01-04T22:17:42.137Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/7d/ec4d7e39f2d941b37a8d629c9c5da5f350088ea8e7e145c338753739b04a/contexter-0.1.4-py2.py3-none-any.whl", hash = "sha256:9d268cf13dfef3c1eb28d791b650b959126c500abc5b6ad6349ec502ac32a19c", size = 6984, upload-time = "2017-01-04T22:19:47.131Z" },
+]
+
+[[package]]
 name = "coverage"
 version = "7.16.2"
 source = { registry = "https://pypi.org/simple" }
@@ -895,12 +904,32 @@ wheels = [
 ]
 
 [[package]]
+name = "signalslot"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "contexter" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a5/1e/989f2e12f3c415f59fd83d5e7d39da417e6d0bd97a449feec7c0711baca1/signalslot-0.2.0.tar.gz", hash = "sha256:64da1d89b3467c239af317779b237e7116b6f2b637ff29cd5226b59308d320e5", size = 8882, upload-time = "2023-05-30T13:20:03.327Z" }
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
 name = "steamos-devkit-mac"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
     { name = "paramiko" },
     { name = "pydantic" },
+    { name = "signalslot" },
     { name = "typer" },
     { name = "ulid-py" },
     { name = "zeroconf" },
@@ -920,6 +949,7 @@ requires-dist = [
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "paramiko", specifier = ">=3.4" },
     { name = "pydantic", specifier = ">=2.7" },
+    { name = "signalslot", specifier = ">=0.2" },
     { name = "typer", specifier = ">=0.12" },
     { name = "ulid-py", specifier = ">=1.1" },
     { name = "zeroconf", specifier = ">=0.131" },

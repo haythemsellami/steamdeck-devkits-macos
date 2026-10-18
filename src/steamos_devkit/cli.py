@@ -10,13 +10,13 @@ from __future__ import annotations
 import logging
 import sys
 from dataclasses import dataclass
-from importlib import resources
 from pathlib import Path
 from typing import NoReturn
 
 import typer
 
 from steamos_devkit import constants
+from steamos_devkit._vendor import upstream_commit
 from steamos_devkit.core import DevkitCore
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import DoctorReport
@@ -157,24 +157,11 @@ def doctor(ctx: typer.Context) -> None:
     raise typer.Exit(_doctor_exit_code(report))
 
 
-def _upstream_commit() -> str | None:
-    try:
-        return (
-            resources.files("steamos_devkit")
-            .joinpath("_vendor")
-            .joinpath("UPSTREAM_COMMIT")
-            .read_text(encoding="utf-8")
-            .strip()
-        )
-    except (FileNotFoundError, OSError):
-        return None
-
-
 @app.command()
 def version(ctx: typer.Context) -> None:
     """Print client and vendored-upstream versions."""
     opts: _Options = ctx.obj
-    upstream = _upstream_commit()
+    upstream = upstream_commit()
     if opts.json:
         import json as jsonlib
 

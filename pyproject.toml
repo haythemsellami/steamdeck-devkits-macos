@@ -8,6 +8,7 @@ dependencies = [
     "appdirs>=1.4.4",
     "paramiko>=3.4",
     "pydantic>=2.7",
+    "signalslot>=0.2",
     "typer>=0.12",
     "ulid-py>=1.1",
     "zeroconf>=0.131",

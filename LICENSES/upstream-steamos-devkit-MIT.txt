@@ -1,6 +1,6 @@
 Vendored from: https://gitlab.steamos.cloud/devkit/steamos-devkit
 Upstream commit: a00ceb7d91ea44a0c3e714a91a06417d6e5cdb33
-Vendored paths:  client/devkit_client/{__init__.py,proxy.py,captured_popen.py}, client/devkit-utils/
+Vendored paths:  client/devkit_client/{__init__.py,proxy.py,captured_popen.py,custom_terminal.py}, client/devkit-utils/
 Location:        src/steamos_devkit/_vendor/ (see docs/decisions.md D1)
 
 MIT License

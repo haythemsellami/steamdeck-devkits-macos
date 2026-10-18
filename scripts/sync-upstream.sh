@@ -51,6 +51,7 @@ mkdir -p "$VENDOR_DIR/devkit_client"
 cp -p "$UPSTREAM_DIR/client/devkit_client/__init__.py" \
       "$UPSTREAM_DIR/client/devkit_client/proxy.py" \
       "$UPSTREAM_DIR/client/devkit_client/captured_popen.py" \
+      "$UPSTREAM_DIR/client/devkit_client/custom_terminal.py" \
       "$VENDOR_DIR/devkit_client/"
 cp -R -p "$UPSTREAM_DIR/client/devkit-utils" "$VENDOR_DIR/devkit-utils"
 printf '%s\n' "$RESOLVED_SHA" > "$VENDOR_DIR/UPSTREAM_COMMIT"
