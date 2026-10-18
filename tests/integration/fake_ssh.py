@@ -54,13 +54,12 @@ import stat as statmod
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import paramiko
     import pytest
 
-BytesLike = Union[bytes, str]
+BytesLike = bytes | str
 CommandRule = tuple[str, BytesLike, BytesLike, int]
 
 COMMAND_NOT_FOUND_EXIT_CODE = 127
@@ -96,9 +95,7 @@ def _normalize_rule(rule: CommandRule | ScriptedResponse) -> ScriptedResponse:
     if isinstance(rule, ScriptedResponse):
         return rule
     pattern, stdout, stderr, exit_code = rule
-    return ScriptedResponse(
-        pattern=pattern, stdout=stdout, stderr=stderr, exit_code=exit_code
-    )
+    return ScriptedResponse(pattern=pattern, stdout=stdout, stderr=stderr, exit_code=exit_code)
 
 
 class FakeChannel:
@@ -208,7 +205,7 @@ class FakeSFTP:
         for key in self._fs:
             if not key.startswith(prefix):
                 continue
-            rest = key[len(prefix):].lstrip("/")
+            rest = key[len(prefix) :].lstrip("/")
             if rest:
                 children.add(rest.split("/", 1)[0])
         if not children and norm not in (".", "/"):
@@ -224,9 +221,7 @@ class FakeSFTP:
         self._require_open()
         key = self._norm(path)
         if key in self._fs:
-            return FakeSFTPAttributes(
-                st_size=len(self._fs[key]), st_mode=statmod.S_IFREG | 0o644
-            )
+            return FakeSFTPAttributes(st_size=len(self._fs[key]), st_mode=statmod.S_IFREG | 0o644)
         if self._is_dir(path) or key in ("/",):
             return FakeSFTPAttributes(st_size=0, st_mode=statmod.S_IFDIR | 0o755)
         raise FileNotFoundError(f"No such file: {path}")
@@ -351,9 +346,7 @@ class FakeSSHClient:
         environment: Any = None,
     ) -> tuple[FakeChannelStdin, FakeChannelFile, FakeChannelFile]:
         self._require_connected("exec_command")
-        rule = next(
-            (rule for rule in self._state.rules if rule.matches(command)), None
-        )
+        rule = next((rule for rule in self._state.rules if rule.matches(command)), None)
         if rule is not None:
             rule.record_use()
             stdout_bytes = _as_bytes(rule.stdout)

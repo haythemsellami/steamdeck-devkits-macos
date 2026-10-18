@@ -11,7 +11,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from fake_ssh import FakeSSHClient, ScriptedResponse, make_paramiko_patch
 
 STATUS_JSON = b'{"hostname": "steamdeck"}\n'
@@ -22,7 +21,9 @@ def fake() -> FakeSSHClient:
     client = FakeSSHClient(
         commands=[
             (r"steamos-get-status --json", STATUS_JSON, b"", 0),
-            ScriptedResponse(r"ls -1t /tmp/\*\.rgp", b"", b"ls: No such file or directory\n", 1, max_uses=2),
+            ScriptedResponse(
+                r"ls -1t /tmp/\*\.rgp", b"", b"ls: No such file or directory\n", 1, max_uses=2
+            ),
             ScriptedResponse(r"ls -1t /tmp/\*\.rgp", b"/tmp/foo.rgp\n", b"", 0),
         ],
         filesystem={
