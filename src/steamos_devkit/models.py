@@ -12,7 +12,7 @@ from ipaddress import IPv4Address
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints, model_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from steamos_devkit.constants import (
     DEVICE_HTTP_PORT_DEFAULT,
@@ -74,14 +74,24 @@ class DeviceStatus(BaseModel):
     session_status: str
     steam_status: Literal["NOT_RUNNING", "ERROR", "OS", "OS_DEV", "SIDELOADED", "UNKNOWN"]
     steam_osclient_branch: str | None = None
-    steam_osclient_version: int | None = None
+    steam_osclient_version: int | str | None = None
     cef_debugging_enabled: bool
     renderdoc_layer_enabled: bool
     renderdoc_replay_server_running: bool
     user_password_is_set: bool
+    steam_default_args: list[str] = Field(default_factory=list)
+    steam_current_args: list[str] = Field(default_factory=list)
     steam_launch_flags: dict[str, str] = Field(default_factory=dict)
     raw: dict[str, object] = Field(default_factory=dict)
     """Unparsed extras from the device response, preserved verbatim."""
+
+    @field_validator("steam_status", mode="before")
+    @classmethod
+    def _strip_enum_prefix(cls, v: object) -> object:
+        # Device sends str(enum), e.g. "SteamStatus.OS" (steamos-get-status:409).
+        if isinstance(v, str) and "." in v:
+            return v.rsplit(".", 1)[1]
+        return v
 
 
 class Title(BaseModel):

@@ -121,6 +121,30 @@ def test_device_status_roundtrip() -> None:
     _roundtrip(DeviceStatus, status)
 
 
+def test_device_status_accepts_real_device_output() -> None:
+    # steamos-get-status emits str(enum) values, a prefix-stripped branch, and
+    # a raw builddate string on Deckard (vendor devkit-utils/steamos-get-status).
+    status = DeviceStatus(
+        hostname="steamdeck",
+        os_name="SteamOS",
+        os_version="3.7.13",
+        is_deckard=False,
+        session_status="SessionConfig.GAMESCOPE",
+        steam_status="SteamStatus.OS",
+        steam_osclient_branch="stable",
+        steam_osclient_version="Unknown - no builddate.txt",
+        cef_debugging_enabled=False,
+        renderdoc_layer_enabled=False,
+        renderdoc_replay_server_running=False,
+        user_password_is_set=True,
+        steam_default_args=["-steamos3", "-gamepadui"],
+        steam_current_args=["-steamos3"],
+    )
+    assert status.steam_status == "OS"
+    assert status.steam_osclient_version == "Unknown - no builddate.txt"
+    _roundtrip(DeviceStatus, status)
+
+
 def test_title_and_detail_roundtrip() -> None:
     title = Title(gameid="my.game", registered_with_steam=True, size_bytes=1024, modified=NOW)
     _roundtrip(Title, title)
