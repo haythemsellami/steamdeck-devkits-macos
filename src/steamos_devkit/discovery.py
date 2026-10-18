@@ -215,7 +215,9 @@ def _permission_error(core: DevkitCore, cause: Exception) -> DevkitError:
     )
 
 
-def discover(core: DevkitCore, timeout_s: float = constants.TIMEOUT_DISCOVER_S) -> list[DiscoveredDevice]:
+def discover(
+    core: DevkitCore, timeout_s: float = constants.TIMEOUT_DISCOVER_S
+) -> list[DiscoveredDevice]:
     """Browse for devkits for up to ``timeout_s`` seconds (spec section 8).
 
     Returns a (possibly empty) snapshot of announcements. A zeroconf-level

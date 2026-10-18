@@ -17,7 +17,6 @@ import sys
 import tempfile
 from typing import TYPE_CHECKING, Literal
 
-from steamos_devkit import constants
 from steamos_devkit.errors import DevkitError
 from steamos_devkit.models import (
     Capabilities,
@@ -103,7 +102,9 @@ def _steam_version(status: DeviceStatus) -> int | None:
     return None
 
 
-def _probe_device(core: DevkitCore, selector: str) -> tuple[DeviceCapabilities, dict[str, bool | None]]:
+def _probe_device(
+    core: DevkitCore, selector: str
+) -> tuple[DeviceCapabilities, dict[str, bool | None]]:
     status = get_status(core, selector)
     handle = core.device_handle(selector)
     probes = {
@@ -111,15 +112,17 @@ def _probe_device(core: DevkitCore, selector: str) -> tuple[DeviceCapabilities, 
         "mangohudctl": _has_command(handle, "mangohudctl"),
         "renderdoccmd": _has_command(handle, "renderdoccmd"),
     }
-    session_select = status.raw.get("session_select")
-    if session_select not in ("holo-session-select", "steamos-session-select"):
+    session_select: Literal["holo-session-select", "steamos-session-select", "unknown"]
+    raw_session_select = status.raw.get("session_select")
+    if raw_session_select in ("holo-session-select", "steamos-session-select"):
+        session_select = raw_session_select
+    elif _has_command(handle, "holo-session-select"):
         # Older devices do not report it: probe (holo landed in SteamOS 3.9).
-        if _has_command(handle, "holo-session-select"):
-            session_select = "holo-session-select"
-        elif _has_command(handle, "steamos-session-select"):
-            session_select = "steamos-session-select"
-        else:
-            session_select = None
+        session_select = "holo-session-select"
+    elif _has_command(handle, "steamos-session-select"):
+        session_select = "steamos-session-select"
+    else:
+        session_select = "unknown"
     device = DeviceCapabilities(
         family="frame" if status.is_deckard else "deck",
         os_version=status.os_version,
@@ -130,7 +133,7 @@ def _probe_device(core: DevkitCore, selector: str) -> tuple[DeviceCapabilities, 
         renderdoc_replay_server_running=status.renderdoc_replay_server_running,
         cef_debugging_enabled=status.cef_debugging_enabled,
         has_mangohudctl=probes["mangohudctl"],
-        session_select=session_select or "unknown",
+        session_select=session_select,
     )
     return device, probes
 
@@ -142,7 +145,12 @@ def _build_operations(
 ) -> dict[str, OperationCapability]:
     ops: dict[str, OperationCapability] = {}
 
-    def add(name: str, status: _OperationStatus, reason: str | None = None, dependency: str | None = None) -> None:
+    def add(
+        name: str,
+        status: _OperationStatus,
+        reason: str | None = None,
+        dependency: str | None = None,
+    ) -> None:
         ops[name] = OperationCapability(status=status, reason=reason, dependency=dependency)
 
     # Host-local operations: no device involvement.

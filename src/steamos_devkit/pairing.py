@@ -83,7 +83,8 @@ def _no_proxy_opener() -> urllib.request.OpenerDirector:
 def _urlopen(request: urllib.request.Request, timeout: float) -> bytes:
     """Single HTTP seam (tests patch this; never leaves the LAN unproxied)."""
     with _no_proxy_opener().open(request, timeout=timeout) as response:
-        return response.read()
+        data: bytes = response.read()
+        return data
 
 
 def _is_timeout(exc: OSError) -> bool:
@@ -110,8 +111,9 @@ def fetch_properties(address: str, port: int, timeout: float) -> dict[str, Any]:
                 ErrorCode.TIMEOUT,
                 f"timed out querying device properties at {address}:{port}",
             ) from e
-        logger.debug("properties.json unavailable at %s:%s (%s); trying /login-name",
-                     address, port, e)
+        logger.debug(
+            "properties.json unavailable at %s:%s (%s); trying /login-name", address, port, e
+        )
     else:
         try:
             data: Any = json.loads(payload)
@@ -170,8 +172,10 @@ def _parse_decline_reason(body: bytes) -> str:
             parsed: Any = json.loads(line)
         except ValueError:
             continue
-        if isinstance(parsed, dict) and isinstance(parsed.get("error"), str):
-            return parsed["error"]
+        if isinstance(parsed, dict):
+            error = parsed.get("error")
+            if isinstance(error, str):
+                return error
     return "pairing was declined on the device"
 
 
@@ -185,7 +189,9 @@ def pair(core: DevkitCore, selector: str, timeout_s: int = constants.TIMEOUT_PAI
     device = core.resolve_device(selector)
     try:
         properties = fetch_properties(
-            device.address, device.port, timeout=min(float(timeout_s), float(constants.LAN_REQUEST_TIMEOUT_S))
+            device.address,
+            device.port,
+            timeout=min(float(timeout_s), float(constants.LAN_REQUEST_TIMEOUT_S)),
         )
     except DevkitError as e:
         code = ErrorCode.PAIRING_TIMEOUT if e.code == ErrorCode.TIMEOUT else e.code

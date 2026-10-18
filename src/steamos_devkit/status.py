@@ -45,14 +45,17 @@ def parse_status(payload: Any) -> DeviceStatus:
     try:
         return DeviceStatus(**fields, raw=extras)
     except ValidationError as e:
-        first = e.errors()[0] if e.errors() else {}
+        details: dict[str, str] = {}
+        if errors := e.errors():
+            first = errors[0]
+            details = {
+                "field": ".".join(str(part) for part in first.get("loc", ())),
+                "reason": str(first.get("msg", "")),
+            }
         raise DevkitError(
             ErrorCode.REMOTE_COMMAND_FAILED,
             f"unexpected steamos-get-status payload: {e.error_count()} validation error(s)",
-            details={
-                "field": ".".join(str(part) for part in first.get("loc", ())),
-                "reason": str(first.get("msg", "")),
-            },
+            details=details,
         ) from e
 
 
