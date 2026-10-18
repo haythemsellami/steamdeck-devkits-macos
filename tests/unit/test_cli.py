@@ -9,6 +9,7 @@ from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
 from steamos_devkit import cli, constants
+from steamos_devkit.cli import common, meta
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import DoctorCheck, DoctorReport
 
@@ -35,7 +36,7 @@ def test_version_json() -> None:
 
 
 def test_version_human_on_tty(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli, "_stdout_is_tty", lambda: True)
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
     result = runner.invoke(cli.app, ["version"])
     assert result.exit_code == 0
     assert result.stdout.startswith("devkit ")
@@ -43,7 +44,7 @@ def test_version_human_on_tty(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_doctor_human_on_tty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli, "_stdout_is_tty", lambda: True)
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
     monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(tmp_path, RSYNC_GOOD)))
     result = runner.invoke(cli.app, ["--state-dir", str(tmp_path / "s"), "doctor"])
     assert result.exit_code == 0
@@ -55,7 +56,7 @@ def test_doctor_human_on_tty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
 def test_die_json_mode(capsys: pytest.CaptureFixture[str]) -> None:
     err = DevkitError(ErrorCode.DEVICE_NOT_FOUND, "no such device")
     with pytest.raises(typer.Exit) as exc_info:
-        cli._die(err, json_mode=True)
+        common.die(err, json_mode=True)
     assert exc_info.value.exit_code == 3
     payload = json.loads(capsys.readouterr().out)
     assert payload == {
@@ -72,7 +73,7 @@ def test_die_json_mode(capsys: pytest.CaptureFixture[str]) -> None:
 def test_die_human_mode(capsys: pytest.CaptureFixture[str]) -> None:
     err = DevkitError(ErrorCode.UNSUPPORTED, "stop-title does not exist upstream")
     with pytest.raises(typer.Exit) as exc_info:
-        cli._die(err, json_mode=False)
+        common.die(err, json_mode=False)
     assert exc_info.value.exit_code == 10
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -159,7 +160,7 @@ def test_render_doctor_human_output(tmp_path: Path) -> None:
         },
         checks=[DoctorCheck(name="rsync", status="ok", summary="rsync 3.5.1")],
     )
-    text = cli._render_doctor(report)
+    text = meta.render_doctor(report)
     assert "[     ok] rsync: rsync 3.5.1" in text
     assert "result: ok" in text
 
@@ -177,8 +178,8 @@ def test_doctor_exit_code_mapping(tmp_path: Path) -> None:
             checks=[DoctorCheck(name=name, status=status, summary="s")],  # type: ignore[arg-type]
         )
 
-    assert cli._doctor_exit_code(report_with("ok", "rsync")) == 0
-    assert cli._doctor_exit_code(report_with("error", "rsync")) == 5
-    assert cli._doctor_exit_code(report_with("error", "ssh")) == 5
-    assert cli._doctor_exit_code(report_with("error", "state-dir")) == 6
-    assert cli._doctor_exit_code(report_with("error", "unlisted-check")) == 1
+    assert meta.doctor_exit_code(report_with("ok", "rsync")) == 0
+    assert meta.doctor_exit_code(report_with("error", "rsync")) == 5
+    assert meta.doctor_exit_code(report_with("error", "ssh")) == 5
+    assert meta.doctor_exit_code(report_with("error", "state-dir")) == 6
+    assert meta.doctor_exit_code(report_with("error", "unlisted-check")) == 1
