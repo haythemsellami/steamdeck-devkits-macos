@@ -52,11 +52,18 @@ def _callback(
 
 
 # --- command registration: one import + register per module, append-only ---
+# Append order is deliberate (not sorted); isort must leave this block alone.
+# isort: off
 from steamos_devkit.cli import meta  # noqa: E402
 from steamos_devkit.cli import device  # noqa: E402
+from steamos_devkit.cli import profiling  # noqa: E402
+from steamos_devkit.cli import session  # noqa: E402
+# isort: on
 
 meta.register(app)
 device.register(app)
+profiling.register(app)
+session.register(app)
 # --- end command registration ---
 
 
