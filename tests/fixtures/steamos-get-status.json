@@ -1,0 +1,54 @@
+{
+    "cef_debugging_enabled": false,
+    "frame_osclient_extra_args": null,
+    "has_side_loaded_client": false,
+    "hostname": "steamdeck",
+    "is_deckard": false,
+    "os_info": {
+        "ANSI_COLOR": "1;35",
+        "BUG_REPORT_URL": "https://support.steampowered.com/",
+        "BUILD_ID": "20251022.100",
+        "DOCUMENTATION_URL": "https://support.steampowered.com/",
+        "HOME_URL": "https://www.steampowered.com/",
+        "ID": "steamos",
+        "ID_LIKE": "arch",
+        "LOGO": "steamos",
+        "NAME": "SteamOS",
+        "PRETTY_NAME": "SteamOS",
+        "SUPPORT_URL": "https://support.steampowered.com/",
+        "VERSION_CODENAME": "holo",
+        "VERSION_ID": "3.7.17"
+    },
+    "os_name": "SteamOS",
+    "os_version": "20251022.100",
+    "renderdoc_layer_enabled": false,
+    "renderdoc_replay_server_running": false,
+    "session_options": [
+        "gamescope",
+        "plasma-x11",
+        "plasma-x11-persistent",
+        "plasma-wayland",
+        "plasma-wayland-persistent"
+    ],
+    "session_select": "holo-session-select",
+    "session_status": "gamescope",
+    "steam_configuration": "SteamConfig.OS",
+    "steam_current_args": [
+        "-steamos3",
+        "-steampal",
+        "-steamdeck",
+        "-gamepadui"
+    ],
+    "steam_default_args": [
+        "-steamos3",
+        "-steampal",
+        "-steamdeck",
+        "-gamepadui"
+    ],
+    "steam_launch_flags": {},
+    "steam_osclient_branch": "stable",
+    "steam_osclient_version": 1761150938,
+    "steam_status": "SteamStatus.OS",
+    "steam_status_description": "OS client, on branch 'stable', version 1761150938 2025-10-22T16:35:38+00:00",
+    "user_password_is_set": true
+}

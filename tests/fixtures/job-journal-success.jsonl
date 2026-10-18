@@ -1,0 +1,7 @@
+{"t":"created","ts":"2026-10-19T10:15:00.123456+00:00","job":{"id":"job_01K9X4W0J1E2F3G4H5J6K7M8N9","kind":"deploy","device":"deck","gameid":"hello_triangle","spec":{"device":"deck","gameid":"hello_triangle","source_dir":"/Users/dev/build/hello_triangle","filters":{"mode":"exclude","patterns":["*.log"]},"clean":false,"checksum":false,"update":false,"compress":true,"register":true,"launch":false,"config":null},"timeout_s":3600,"created_at":"2026-10-19T10:15:00.123456+00:00"}}
+{"t":"started","ts":"2026-10-19T10:15:00.234567+00:00","pid":42371}
+{"t":"progress","ts":"2026-10-19T10:15:01.345678+00:00","phase":"transferring","bytes_done":8388608,"bytes_total":44654666,"items_done":1,"rate_bps":83886080}
+{"t":"progress","ts":"2026-10-19T10:15:02.456789+00:00","phase":"transferring","bytes_done":29360128,"bytes_total":44654666,"items_done":3,"rate_bps":73400320}
+{"t":"progress","ts":"2026-10-19T10:15:03.567890+00:00","phase":"transferring","bytes_done":44654666,"bytes_total":44654666,"items_done":7,"rate_bps":68157440}
+{"t":"artifact","ts":"2026-10-19T10:15:03.678901+00:00","artifact_id":"art_01K9X4WQZABCDEFGHJKMNPQRST"}
+{"t":"succeeded","ts":"2026-10-19T10:15:04.789012+00:00","result":{"ok":true,"code":null,"device":{"name":"deck","address":"192.0.2.10","port":32000,"login":"deck","family":"deck","paired_at":"2026-10-18T09:00:00+00:00","added_via":"explicit","last_seen":"2026-10-19T10:14:59+00:00"},"message":"deploy complete","upload_complete":true,"registration_complete":true,"launch":null}}

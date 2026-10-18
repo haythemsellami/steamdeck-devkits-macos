@@ -1,0 +1,5 @@
+ssh-approve-key: received registration request from 192.0.2.20
+ssh-approve-key: waiting for on-device approval (30s timeout)
+ssh-approve-key: request was declined by the device owner
+{"error": "Pairing request was declined on the device."}
+ssh-approve-key: exiting, status 1

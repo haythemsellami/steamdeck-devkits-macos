@@ -1,0 +1,4 @@
+{"t":"created","ts":"2026-10-19T11:02:10.111111+00:00","job":{"id":"job_01K9XBV3M4N5P6Q7R8S9T0W1X2","kind":"deploy","device":"deck","gameid":"spacegame_dev","spec":{"device":"deck","gameid":"spacegame_dev","source_dir":"/Users/dev/build/spacegame_dev","filters":{"mode":"exclude","patterns":[]},"clean":false,"checksum":false,"update":true,"compress":true,"register":true,"launch":true,"config":null},"timeout_s":3600,"created_at":"2026-10-19T11:02:10.111111+00:00"}}
+{"t":"started","ts":"2026-10-19T11:02:10.222222+00:00","pid":42408}
+{"t":"progress","ts":"2026-10-19T11:02:11.333333+00:00","phase":"transferring","bytes_done":4194304,"bytes_total":44654666,"items_done":1,"rate_bps":52428800}
+{"t":"progress","ts":"2026-10-19T11:02:12.444444+00:00","phase":"transferring","bytes_done":12582912,"bytes_total":44654666,"items_done":2,"rate_bps":57671680}

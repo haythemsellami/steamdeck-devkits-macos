@@ -1,0 +1,12 @@
+sending incremental file list
+*deleting   obsolete/junk.dat
+*deleting   obsolete/
+*deleting   savegame.sav
+>f.s....... README.txt
+>f..t...... config/default.cfg
+>f+++++++++ data/pak1.dat
+cd+++++++++ scripts/
+>f+++++++++ scripts/run.sh
+
+sent 432 bytes  received 90 bytes  1,044.00 bytes/sec
+total size is 44,654,742  speedup is 85,545.48 (DRY RUN)

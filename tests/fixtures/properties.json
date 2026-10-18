@@ -1,0 +1,6 @@
+{
+  "settings": "{\"sshd\": \"1\"}",
+  "login": "deck",
+  "devkit1": "/usr/lib/steamos-devkit/devkit-1",
+  "txtvers": "1"
+}

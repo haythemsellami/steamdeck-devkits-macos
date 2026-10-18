@@ -1,0 +1,30 @@
+sending incremental file list
+.d..t...... ./
+>f.stp..... README.txt
+             75   0%    0.00kB/s    0:00:00               75   0%    0.00kB/s    0:00:00 (xfr#1, to-chk=13/15)
+.d..t...... assets/
+.d..t...... assets/audio/
+>f..tp..... assets/audio/intro.ogg
+        614,475   1%  585.94MB/s    0:00:00 (xfr#2, to-chk=6/15) 
+.d..t...... bin/
+>f..tp..... bin/game.x86_64
+     29,974,603  67%    3.10GB/s    0:00:00 (xfr#3, to-chk=5/15)
+>f..tp..... bin/libengine.so
+     38,363,211  85%    2.75GB/s    0:00:00 (xfr#4, to-chk=4/15)
+.d..t...... config/
+>f..tp..... config/default.cfg
+     38,363,254  85%    2.75GB/s    0:00:00 (xfr#5, to-chk=3/15)
+.d..t...... data/
+>f..tp..... data/pak0.dat
+     42,557,558  95%    2.48GB/s    0:00:00 (xfr#6, to-chk=2/15)
+>f..tp..... data/textures.ktx2
+     44,654,710  99%    2.31GB/s    0:00:00 (xfr#7, to-chk=1/15)
+cd+++++++++ docs/
+>f+++++++++ docs/CHANGELOG.md
+     44,654,744 100%    2.31GB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%    2.31GB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%    2.31GB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%  946.36MB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%  946.36MB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%  946.36MB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%  946.36MB/s    0:00:00 (xfr#8, to-chk=0/15)     44,654,744 100%  946.36MB/s    0:00:00 (xfr#8, to-chk=0/15)
+*deleting   stale/cache.tmp
+*deleting   stale/
+*deleting   bin/old-debugger.dll
+
+sent 2,936 bytes  received 202 bytes  6,276.00 bytes/sec
+total size is 44,654,744  speedup is 14,230.32
