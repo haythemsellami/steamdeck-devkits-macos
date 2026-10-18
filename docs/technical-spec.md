@@ -83,11 +83,16 @@ src/steamos_devkit/
   mcp_server.py           # FastMCP tools/resources
   _vendor/
     UPSTREAM_COMMIT       # full upstream sha
-    devkit_client/        # __init__.py, proxy.py, captured_popen.py
+    devkit_client/        # __init__.py, proxy.py, captured_popen.py, custom_terminal.py
     devkit-utils/         # device-side tree, verbatim
 scripts/
   sync-upstream.sh        # re-fetch + re-apply patch series
-  notarize-spike.sh       # M0.5 packaging proof
+  run-gates.sh            # ruff + mypy + pytest --cov, same as CI
+  build-app.sh            # M0.5 spike: swiftc .app build
+  embed-python.sh         # M0.5 spike: pinned python-build-standalone into the bundle
+  bundle-rsync.sh         # M0.5 spike: rsync 3.x + dylib closure into the bundle
+  sign.sh                 # M0.5 spike: hardened-runtime signing (Developer ID or ad-hoc)
+  notarize.sh             # M0.5 spike: notarytool submission via keychain profile
 patches/                  # quilt-style series applied by sync-upstream.sh
 tests/
   unit/
@@ -154,10 +159,14 @@ class Device(BaseModel):  # registry entry
 
 class DeviceStatus(BaseModel):  # parsed steamos-get-status --json (audit §4)
     hostname: str; os_name: str; os_version: str; is_deckard: bool
-    session_status: str; steam_status: Literal["NOT_RUNNING","ERROR","OS","OS_DEV","SIDELOADED","UNKNOWN"]
-    steam_osclient_branch: str | None; steam_osclient_version: int | None
+    session_status: str                       # device sends str(enum), e.g. "SessionConfig.GAMESCOPE"
+    steam_status: Literal["NOT_RUNNING","ERROR","OS","OS_DEV","SIDELOADED","UNKNOWN"]
+        # device sends "SteamStatus.OS" etc. — parser strips the enum prefix (validator)
+    steam_osclient_branch: str | None         # prefix-stripped by device: "stable", not "steamdeck_stable"
+    steam_osclient_version: int | str | None  # int on Deck; raw builddate string on Frame
     cef_debugging_enabled: bool; renderdoc_layer_enabled: bool
     renderdoc_replay_server_running: bool; user_password_is_set: bool
+    steam_default_args: list[str]; steam_current_args: list[str]   # device emits lists
     steam_launch_flags: dict[str, str]
     raw: dict  # unparsed extras preserved
 
@@ -501,3 +510,14 @@ Sequencing note: M0.5 runs in parallel with M1–M2; if the spike fails, D2's fa
 ## 16. Explicitly out of scope (v1)
 
 Emulator, SteamOS fork, game manager, reverse engineering, automatic optimization; full Steam-library access (devkit titles only); Windows/Proton binary porting; local analysis of captures (gpuvis/RGP/qrenderdoc are off-platform viewers); stop-title and readiness signals until device-side support exists; Ed25519 pairing keys (device-side verification pending); IPv6 discovery.
+
+## Appendix A — ratified implementation deltas (2026-10-19, wave-1 review)
+
+- §1: the `devkit-mcp` console script is registered at M4, when `mcp_server.py` lands (not M0).
+- §2.2: `custom_terminal.py` is vendored too — the upstream core imports it at module load.
+- §5: `DeviceStatus` matches real device output (see inline comments there); models also define `TitleDetail`, `RsyncInfo`, `ToolAvailability`, `HostContext`, `DoctorCheck`/`DoctorReport`, `JobProgress`, `JobKind`, which the spec referenced but never defined.
+- §10: unmapped error codes assigned — `PAIRING_TIMEOUT`→8, `JOB_NOT_FOUND`/`ARTIFACT_NOT_FOUND`→2, `STATE_CORRUPT`→1.
+- §12: `$DEVKIT_RSYNC` is authoritative when set — a bad override fails closed rather than falling through to Homebrew/PATH.
+- §4: the upstream gameid regex requires ≥ 2 characters; single-char gameids are rejected (upstream-faithful).
+- D4: rsync GPLv3 attribution + source-offer notice is required before M8 distribution (tracked in `docs/packaging-spike.md`).
+- Hardware conftest scopes its skip marker to `tests/hardware/` only (a session-wide hook must not skip the whole suite).
