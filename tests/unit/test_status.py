@@ -117,7 +117,8 @@ def test_status_missing_required_keys_rejected(
 ) -> None:
     _register(core)
     make_paramiko_patch(
-        monkeypatch, commands=[(r"steamos-get-status", json.dumps({"hostname": "x"}).encode(), b"", 0)]
+        monkeypatch,
+        commands=[(r"steamos-get-status", json.dumps({"hostname": "x"}).encode(), b"", 0)],
     )
     with pytest.raises(DevkitError) as exc_info:
         status.get_status(core, "deck")
@@ -144,3 +145,58 @@ def test_parse_status_direct_roundtrip() -> None:
     payload = json.loads((FIXTURES / "steamos-get-status.json").read_text())
     parsed = status.parse_status(payload)
     assert DeviceStatus.model_validate_json(parsed.model_dump_json()) == parsed
+
+
+# --- CLI: devkit status (spec section 10) -----------------------------------------
+
+from typer.testing import CliRunner  # noqa: E402
+
+from steamos_devkit import cli  # noqa: E402
+from steamos_devkit.cli import common  # noqa: E402
+
+runner = CliRunner()
+
+
+def test_cli_status_json(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    _register(core)
+    payload = (FIXTURES / "steamos-get-status.json").read_bytes()
+    make_paramiko_patch(monkeypatch, commands=[(r"steamos-get-status --json", payload, b"", 0)])
+    result = runner.invoke(cli.app, ["status", "deck"])
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["hostname"] == "steamdeck"
+    assert report["steam_status"] == "OS"
+    assert report["raw"]["session_select"] == "holo-session-select"
+
+
+def test_cli_status_human_on_tty(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
+    _register(core)
+    payload = (FIXTURES / "steamos-get-status.json").read_bytes()
+    make_paramiko_patch(monkeypatch, commands=[(r"steamos-get-status --json", payload, b"", 0)])
+    result = runner.invoke(cli.app, ["status", "deck"])
+    assert result.exit_code == 0
+    assert "steamdeck — SteamOS 20251022.100 (Steam Deck)" in result.stdout
+    assert "steam: OS" in result.stdout
+    assert not result.stdout.startswith("{")
+
+
+def test_cli_status_unknown_device_exit_3(
+    core: DevkitCore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    make_paramiko_patch(monkeypatch)
+    # no mDNS answer for a bare unknown name
+    monkeypatch.setattr("steamos_devkit.discovery.resolve_name", lambda core, name, **kw: None)
+    result = runner.invoke(cli.app, ["status", "ghost"])
+    assert result.exit_code == 3
+    assert json.loads(result.stdout)["code"] == "DEVICE_NOT_FOUND"
+
+
+def test_cli_status_uses_last_device(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    _register(core)
+    core.state.set_last_device("deck")
+    payload = (FIXTURES / "steamos-get-status.json").read_bytes()
+    make_paramiko_patch(monkeypatch, commands=[(r"steamos-get-status --json", payload, b"", 0)])
+    result = runner.invoke(cli.app, ["status"])
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["hostname"] == "steamdeck"

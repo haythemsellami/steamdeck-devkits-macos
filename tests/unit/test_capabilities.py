@@ -25,17 +25,47 @@ OPENRSYNC = "openrsync: protocol version 29\\n"
 
 ALL_OPERATIONS = {
     # host-local
-    "doctor", "discover", "list_devices", "forget_device", "pair", "capabilities",
-    "job_status", "job_cancel", "list_jobs", "list_artifacts", "read_artifact",
-    "migrate", "version", "shell",
+    "doctor",
+    "discover",
+    "list_devices",
+    "forget_device",
+    "pair",
+    "capabilities",
+    "job_status",
+    "job_cancel",
+    "list_jobs",
+    "list_artifacts",
+    "read_artifact",
+    "migrate",
+    "version",
+    "shell",
     # device operations the upstream protocol supports
-    "status", "list_titles", "inspect_title", "configure_title", "preview_deploy",
-    "deploy", "register_title", "launch_title", "delete_title", "fetch_logs",
-    "screenshot", "controller_config", "perf_overlay", "frametimes",
-    "renderdoc_layer", "renderdoc_server", "proton_logging", "set_steam_mode",
-    "set_session", "reload_steam", "gpu_trace", "rgp_capture",
+    "status",
+    "list_titles",
+    "inspect_title",
+    "configure_title",
+    "preview_deploy",
+    "deploy",
+    "register_title",
+    "launch_title",
+    "delete_title",
+    "fetch_logs",
+    "screenshot",
+    "controller_config",
+    "perf_overlay",
+    "frametimes",
+    "renderdoc_layer",
+    "renderdoc_server",
+    "proton_logging",
+    "set_steam_mode",
+    "set_session",
+    "reload_steam",
+    "gpu_trace",
+    "rgp_capture",
     # never-faked honest gaps (audit section 7)
-    "stop_title", "launch_readiness", "title_stdout_streaming",
+    "stop_title",
+    "launch_readiness",
+    "title_stdout_streaming",
     # Windows-host-only upstream feature
     "vs_remote_debug",
 }
@@ -81,9 +111,24 @@ def _script_device(
 ) -> None:
     commands: list[tuple[str, bytes, bytes, int]] = [
         (r"steamos-get-status --json", (FIXTURES / fixture).read_bytes(), b"", 0),
-        (r"command -v gpu-trace", b"/usr/bin/gpu-trace\n" if gpu_trace else b"", b"", 0 if gpu_trace else 127),
-        (r"command -v mangohudctl", b"/usr/bin/mangohudctl\n" if mangohudctl else b"", b"", 0 if mangohudctl else 127),
-        (r"command -v renderdoccmd", b"/usr/bin/renderdoccmd\n" if renderdoccmd else b"", b"", 0 if renderdoccmd else 127),
+        (
+            r"command -v gpu-trace",
+            b"/usr/bin/gpu-trace\n" if gpu_trace else b"",
+            b"",
+            0 if gpu_trace else 127,
+        ),
+        (
+            r"command -v mangohudctl",
+            b"/usr/bin/mangohudctl\n" if mangohudctl else b"",
+            b"",
+            0 if mangohudctl else 127,
+        ),
+        (
+            r"command -v renderdoccmd",
+            b"/usr/bin/renderdoccmd\n" if renderdoccmd else b"",
+            b"",
+            0 if renderdoccmd else 127,
+        ),
     ]
     commands.extend(extra_commands or [])
     make_paramiko_patch(monkeypatch, commands=commands)
@@ -93,7 +138,9 @@ def _script_device(
 
 
 def test_host_only_capabilities(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     caps = capabilities.capabilities(core)
     assert caps.device is None
     assert caps.host.platform == "darwin"
@@ -111,7 +158,9 @@ def test_host_only_capabilities(core: DevkitCore, monkeypatch: pytest.MonkeyPatc
 def test_broken_rsync_marks_dependent_operations(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", OPENRSYNC)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", OPENRSYNC))
+    )
     caps = capabilities.capabilities(core)
     for name in ("deploy", "preview_deploy", "fetch_logs", "status", "list_titles"):
         op = caps.operations[name]
@@ -127,7 +176,9 @@ def test_broken_rsync_marks_dependent_operations(
 def test_honest_gaps_are_unsupported_upstream(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     caps = capabilities.capabilities(core)
     for name in ("stop_title", "launch_readiness", "title_stdout_streaming"):
         op = caps.operations[name]
@@ -139,7 +190,9 @@ def test_honest_gaps_are_unsupported_upstream(
 
 
 def test_capabilities_json_roundtrip(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     caps = capabilities.capabilities(core)
     assert Capabilities.model_validate_json(caps.model_dump_json()) == caps
 
@@ -148,7 +201,9 @@ def test_capabilities_json_roundtrip(core: DevkitCore, monkeypatch: pytest.Monke
 
 
 def test_deck_capabilities(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     _script_device(monkeypatch, "steamos-get-status.json")
     caps = capabilities.capabilities(core, "deck")
@@ -170,7 +225,9 @@ def test_deck_capabilities(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) ->
 def test_frame_disables_deck_only_captures(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core, name="frame", address="192.0.2.20")
     _script_device(monkeypatch, "steamos-get-status-deckard.json")
     caps = capabilities.capabilities(core, "frame")
@@ -185,7 +242,9 @@ def test_frame_disables_deck_only_captures(
 def test_missing_gpu_trace_binary_downgrades_captures(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     _script_device(monkeypatch, "steamos-get-status.json", gpu_trace=False)
     caps = capabilities.capabilities(core, "deck")
@@ -198,7 +257,9 @@ def test_missing_gpu_trace_binary_downgrades_captures(
 def test_missing_mangohudctl_downgrades_overlay_and_frametimes(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     _script_device(monkeypatch, "steamos-get-status.json", mangohudctl=False)
     caps = capabilities.capabilities(core, "deck")
@@ -211,7 +272,9 @@ def test_missing_mangohudctl_downgrades_overlay_and_frametimes(
 def test_missing_renderdoccmd_downgrades_renderdoc_ops(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     _script_device(monkeypatch, "steamos-get-status.json", renderdoccmd=False)
     caps = capabilities.capabilities(core, "deck")
@@ -239,7 +302,9 @@ def _minimal_status() -> bytes:
 def test_session_select_probed_when_status_lacks_it(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     make_paramiko_patch(
         monkeypatch,
@@ -256,7 +321,9 @@ def test_session_select_probed_when_status_lacks_it(
 def test_session_select_falls_back_to_legacy(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     make_paramiko_patch(
         monkeypatch,
@@ -274,7 +341,9 @@ def test_session_select_falls_back_to_legacy(
 def test_session_select_unknown_when_neither_present(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD)))
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
     _register(core)
     make_paramiko_patch(
         monkeypatch, commands=[(r"steamos-get-status --json", _minimal_status(), b"", 0)]
@@ -282,3 +351,53 @@ def test_session_select_unknown_when_neither_present(
     caps = capabilities.capabilities(core, "deck")
     assert caps.device is not None
     assert caps.device.session_select == "unknown"
+
+
+# --- CLI: devkit capabilities (spec section 10) ------------------------------------
+
+from typer.testing import CliRunner  # noqa: E402
+
+from steamos_devkit import cli  # noqa: E402
+from steamos_devkit.cli import common  # noqa: E402
+
+runner = CliRunner()
+
+
+def test_cli_capabilities_host_only_json(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
+    result = runner.invoke(cli.app, ["capabilities"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["device"] is None
+    assert payload["host"]["rsync"]["ok"] is True
+    assert payload["operations"]["stop_title"]["status"] == "unsupported_upstream"
+
+
+def test_cli_capabilities_with_device(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
+    _register(core)
+    _script_device(monkeypatch, "steamos-get-status.json")
+    result = runner.invoke(cli.app, ["capabilities", "deck"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["device"]["family"] == "deck"
+    assert payload["operations"]["gpu_trace"]["status"] == "supported_untested"
+
+
+def test_cli_capabilities_human_on_tty(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR, str(_fake_rsync(core.state.root / "bin", RSYNC_GOOD))
+    )
+    _register(core)
+    _script_device(monkeypatch, "steamos-get-status.json")
+    result = runner.invoke(cli.app, ["capabilities", "deck"])
+    assert result.exit_code == 0
+    assert "host: darwin" in result.stdout
+    assert "device: family=deck" in result.stdout
+    assert "stop_title: unsupported_upstream" in result.stdout
+    assert not result.stdout.startswith("{")

@@ -5,18 +5,23 @@ Zeroconf is always faked: tests never open real sockets.
 
 from __future__ import annotations
 
+import json as jsonlib
 import socket
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, ClassVar
 
 import pytest
+from typer.testing import CliRunner
 
-from steamos_devkit import constants, discovery
+from steamos_devkit import cli, constants, discovery
+from steamos_devkit.cli import common
 from steamos_devkit.core import DevkitCore
 from steamos_devkit.device import resolve_device
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import Device, DiscoveredDevice
+
+runner = CliRunner()
 
 SERVICE_TYPE = constants.MDNS_SERVICE_TYPE
 
@@ -24,7 +29,7 @@ SERVICE_TYPE = constants.MDNS_SERVICE_TYPE
 class FakeZeroconf:
     """Stand-in for zeroconf.Zeroconf: canned get_service_info, no sockets."""
 
-    instances: ClassVar[list["FakeZeroconf"]] = []
+    instances: ClassVar[list[FakeZeroconf]] = []
     construct_error: ClassVar[Exception | None] = None
 
     def __init__(self) -> None:
@@ -48,7 +53,7 @@ class FakeZeroconf:
 
 
 class FakeServiceBrowser:
-    instances: ClassVar[list["FakeServiceBrowser"]] = []
+    instances: ClassVar[list[FakeServiceBrowser]] = []
 
     def __init__(self, zc: Any, type_: str, listener: Any = None, **kwargs: Any) -> None:
         self.zc = zc
@@ -268,9 +273,7 @@ def test_resolve_name_matches_case_insensitively(
     assert device.last_seen is not None
 
 
-def test_resolve_name_defaults_login(
-    core: DevkitCore, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_resolve_name_defaults_login(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         discovery, "discover", lambda core, timeout_s: [_discovered("frame", login=None)]
     )
@@ -343,3 +346,49 @@ def test_resolve_device_registry_hit_skips_mdns(
         lambda core, name, **kw: (_ for _ in ()).throw(AssertionError("no mDNS on registry hit")),
     )
     assert resolve_device(core, "deck").address == "192.0.2.10"
+
+
+# --- CLI: devkit discover (spec section 10) -------------------------------------
+
+
+def test_cli_discover_json(monkeypatch: pytest.MonkeyPatch, state_dir: Path) -> None:
+    monkeypatch.setattr(
+        discovery,
+        "discover",
+        lambda core, timeout_s: [_discovered("deck"), _discovered("frame", "192.0.2.20")],
+    )
+    result = runner.invoke(cli.app, ["discover"])
+    assert result.exit_code == 0
+    payload = jsonlib.loads(result.stdout)  # auto-JSON: CliRunner stdout is not a TTY
+    assert [d["name"] for d in payload] == ["deck", "frame"]
+    assert payload[0]["via"] == "mdns"
+
+
+def test_cli_discover_human_on_tty(monkeypatch: pytest.MonkeyPatch, state_dir: Path) -> None:
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
+    monkeypatch.setattr(discovery, "discover", lambda core, timeout_s: [_discovered("deck")])
+    result = runner.invoke(cli.app, ["discover", "--timeout", "0.1"])
+    assert result.exit_code == 0
+    assert "deck  192.0.2.10:32000  login=deck" in result.stdout
+    assert not result.stdout.startswith("[")
+
+
+def test_cli_discover_empty_human(monkeypatch: pytest.MonkeyPatch, state_dir: Path) -> None:
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
+    monkeypatch.setattr(discovery, "discover", lambda core, timeout_s: [])
+    result = runner.invoke(cli.app, ["discover"])
+    assert result.exit_code == 0
+    assert "no devices discovered" in result.stdout
+
+
+def test_cli_discover_permission_error_exit_6(
+    monkeypatch: pytest.MonkeyPatch, state_dir: Path
+) -> None:
+    def _blocked(core: DevkitCore, timeout_s: float) -> list[DiscoveredDevice]:
+        raise DevkitError(ErrorCode.PERMISSION_LOCAL_NETWORK, "blocked by TCC")
+
+    monkeypatch.setattr(discovery, "discover", _blocked)
+    result = runner.invoke(cli.app, ["discover"])
+    assert result.exit_code == 6  # local permission problem (spec section 10)
+    payload = jsonlib.loads(result.stdout)
+    assert payload["code"] == "PERMISSION_LOCAL_NETWORK"

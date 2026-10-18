@@ -10,15 +10,20 @@ import json
 import os
 import stat
 import urllib.error
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
 
-from steamos_devkit import constants, pairing
+from steamos_devkit import cli, pairing
+from steamos_devkit.cli import common
 from steamos_devkit.core import DevkitCore
 from steamos_devkit.errors import DevkitError, ErrorCode
-from steamos_devkit.models import Device
+from steamos_devkit.models import Device, Result
+
+runner = CliRunner()
 
 PROPERTIES = Path(__file__).resolve().parent.parent / "fixtures" / "properties.json"
 DECLINE_BODY = Path(__file__).resolve().parent.parent / "fixtures" / "pairing-403-body.txt"
@@ -130,9 +135,7 @@ def test_urlopen_uses_no_proxy_opener(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(urllib.request, "build_opener", spy)
     pairing._no_proxy_opener()
-    (handler,) = [
-        h for h in captured["handlers"] if isinstance(h, urllib.request.ProxyHandler)
-    ]
+    (handler,) = [h for h in captured["handlers"] if isinstance(h, urllib.request.ProxyHandler)]
     assert handler.proxies == {}  # env proxies are stripped for LAN requests
     # and the resulting opener therefore registers no proxy scheme handlers
     opener = pairing._no_proxy_opener()
@@ -292,3 +295,105 @@ def test_parse_decline_reason_directly() -> None:
     assert pairing._parse_decline_reason(body) == "Pairing request was declined on the device."
     assert pairing._parse_decline_reason(b'{"other": 1}\n') == "pairing was declined on the device"
     assert pairing._parse_decline_reason(b"") == "pairing was declined on the device"
+
+
+# --- CLI: pair / devices list / devices forget (spec section 10) -----------------
+
+
+def test_cli_pair_success_json(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    paired = Device(
+        name="deck",
+        address="192.0.2.10",
+        login="deck",
+        paired_at=datetime.now(UTC),
+        added_via="explicit",
+        last_seen=datetime.now(UTC),
+    )
+    seen: dict[str, Any] = {}
+
+    def fake_pair(core: DevkitCore, selector: str, timeout_s: int = 120) -> Result:
+        seen["selector"] = selector
+        seen["timeout_s"] = timeout_s
+        return Result.success(device=paired, message="paired")
+
+    monkeypatch.setattr(pairing, "pair", fake_pair)
+    result = runner.invoke(cli.app, ["pair", "deck", "--timeout", "45"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["message"] == "paired"
+    assert payload["device"]["name"] == "deck"
+    assert seen == {"selector": "deck", "timeout_s": 45}
+
+
+def test_cli_pair_declined_exit_4(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pairing,
+        "pair",
+        lambda core, selector, timeout_s=120: Result.failure(
+            ErrorCode.PAIRING_DECLINED, "declined on the device"
+        ),
+    )
+    result = runner.invoke(cli.app, ["--json", "pair", "192.0.2.10"])
+    assert result.exit_code == 4  # pairing declined/failed (spec section 10)
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["code"] == "PAIRING_DECLINED"
+
+
+def test_cli_pair_defaults_to_last_device(
+    core: DevkitCore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    core.state.set_last_device("deck")
+    seen: list[str] = []
+    monkeypatch.setattr(
+        pairing,
+        "pair",
+        lambda core, selector, timeout_s=120: (
+            seen.append(selector) or Result.success(message="paired")
+        ),
+    )
+    result = runner.invoke(cli.app, ["pair"])
+    assert result.exit_code == 0
+    assert seen == ["deck"]
+
+
+def test_cli_pair_without_selector_or_last_device(
+    core: DevkitCore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
+    result = runner.invoke(cli.app, ["pair"])
+    assert result.exit_code == 2  # usage/validation (spec section 10)
+
+
+def test_cli_devices_list_and_forget(core: DevkitCore) -> None:
+    core.state.devices.upsert(
+        Device(name="deck", address="192.0.2.10", login="deck", added_via="mdns")
+    )
+    core.state.set_last_device("deck")
+    result = runner.invoke(cli.app, ["devices", "list"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert [d["name"] for d in payload] == ["deck"]
+
+    result = runner.invoke(cli.app, ["devices", "forget", "deck"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["message"] == "forgot deck"
+    assert core.state.devices.list() == []
+    assert core.state.last_device is None  # dangling marker cleared
+
+
+def test_cli_devices_forget_unknown_exit_3(core: DevkitCore) -> None:
+    result = runner.invoke(cli.app, ["devices", "forget", "ghost"])
+    assert result.exit_code == 3  # device not found (spec section 10)
+    payload = json.loads(result.stdout)
+    assert payload["code"] == "DEVICE_NOT_FOUND"
+
+
+def test_cli_devices_list_empty_human(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(common, "stdout_is_tty", lambda: True)
+    result = runner.invoke(cli.app, ["devices", "list"])
+    assert result.exit_code == 0
+    assert "no registered devices" in result.stdout
