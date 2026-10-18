@@ -527,3 +527,16 @@ Emulator, SteamOS fork, game manager, reverse engineering, automatic optimizatio
 - §7.3: the itemize parser must treat `cd+++++++++` (directory creation) as an entry; only `>`/`<` leaders are transfers otherwise.
 - rsync progress2 records are `\r`-separated; parsers split on both `\r` and `\n`.
 - `types-paramiko` added as a dev dependency (paramiko ships no py.typed).
+
+### Wave-2 review deltas (2026-10-19)
+
+- §8 register: the `steam-client-create-shortcut` payload carries seven keys — `force_appid`, `lepton_args`, and `settings.compat_tool` are always present (`""` when unset) because the device script reads them unconditionally; `argv` is `None` when no local config exists so the device's saved entrypoint is never clobbered.
+- §8 launch: launch detection checks stdout **and** stderr for the device-side success marker (the RPC helper logs it on stderr); `readiness` stays `"unknown"`.
+- §7.2: cancellation is in-process only. A `--no-wait` CLI job dies with its process and is journaled `interrupted` by the next process's recovery sweep; the long-lived MCP server is the real no-wait/cancel context. Cross-process cancel would need a journal cancel-request event — deferred.
+- §7.4 gpu-trace: retry once via `gpu-trace --start` on any capture failure (not only "command not found"); RGP stability is size-only (3 equal samples, 1 s interval, no fuser).
+- §4 proton logging: `PROTON_LOG` is always `1` when enabled; the WINEDEBUG string goes to its own file (upstream's combined write appears to be an upstream bug).
+- Toggles (`mangohudctl`, session-select) run check=True: silent remote failures surface as REMOTE_COMMAND_FAILED (stricter than upstream on purpose).
+- `resolve_device` propagates discovery-infrastructure errors (e.g. PERMISSION_LOCAL_NETWORK) instead of masking them as DEVICE_NOT_FOUND; a pure mDNS miss is DEVICE_NOT_FOUND.
+- SFTP sidecar writes use absolute paths (`/home/<login>/devkit-game/…`); shell command paths keep the tilde unquoted.
+- SFTP-side `DeviceCapabilities` probes beyond the status model feed only the operations matrix.
+- Open: CLI selector defaulting is inconsistent between command modules (device commands fall back to last-device; titles/deploy require a positional) — standardized to optional-with-last-device-fallback in wave 3.
