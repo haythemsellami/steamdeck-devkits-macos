@@ -199,7 +199,7 @@ class LaunchResult(BaseModel):
 
     gameid: GameId
     launched: bool
-    device_response: str
+    device_response: str = ""
     readiness: Literal["unknown"] = "unknown"  # no upstream readiness signal (audit section 7)
 
 
