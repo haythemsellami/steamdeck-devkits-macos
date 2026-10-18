@@ -53,8 +53,10 @@ def _callback(
 
 # --- command registration: one import + register per module, append-only ---
 from steamos_devkit.cli import meta  # noqa: E402
+from steamos_devkit.cli import device  # noqa: E402
 
 meta.register(app)
+device.register(app)
 # --- end command registration ---
 
 
