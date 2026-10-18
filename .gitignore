@@ -1,0 +1,26 @@
+# Reference material (audit-only clone, not our source)
+upstream/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# App packaging (M0.5+)
+app/build/
+app/.runtime/
+app/.signing/
+
+# Local devkit state during development
+.devkit-state/
