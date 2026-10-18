@@ -34,9 +34,7 @@ class DevkitCore:
 
     def __init__(self, state_dir: Path | None = None, adapter: HostAdapter | None = None) -> None:
         self._adapter: HostAdapter = adapter if adapter is not None else get_adapter()
-        self._state = StateStore(
-            resolve_state_dir(state_dir, default=self._adapter.state_dir())
-        )
+        self._state = StateStore(resolve_state_dir(state_dir, default=self._adapter.state_dir()))
 
     @property
     def adapter(self) -> HostAdapter:
@@ -157,7 +155,9 @@ class DevkitCore:
                 summary="no terminal emulator found; interactive shells (devkit shell) "
                 "will be unavailable",
             )
-        return DoctorCheck(name="terminal", status="ok", summary=f"interactive shells via {terminal}")
+        return DoctorCheck(
+            name="terminal", status="ok", summary=f"interactive shells via {terminal}"
+        )
 
 
 __all__ = ["DevkitCore", "DevkitError", "ErrorCode"]

@@ -7,6 +7,7 @@ loading is code execution and never happens automatically.
 
 from __future__ import annotations
 
+import builtins
 import json
 import logging
 import os
@@ -142,7 +143,7 @@ class DeviceRegistry:
         self._save(kept)
         return True
 
-    def _load(self) -> list[Device]:
+    def _load(self) -> builtins.list[Device]:  # builtins: the class has a .list() method
         if not self._path.exists():
             return []
         data = _read_json_file(self._path)
@@ -157,8 +158,11 @@ class DeviceRegistry:
                 details={"path": str(self._path)},
             ) from e
 
-    def _save(self, devices: list[Device]) -> None:
-        payload = {"schema_version": SCHEMA_VERSION, "devices": [d.model_dump(mode="json") for d in devices]}
+    def _save(self, devices: builtins.list[Device]) -> None:
+        payload = {
+            "schema_version": SCHEMA_VERSION,
+            "devices": [d.model_dump(mode="json") for d in devices],
+        }
         _atomic_write(self._path, json.dumps(payload, indent=2) + "\n")
 
 
@@ -200,7 +204,13 @@ class StateStore:
 
     def ensure_layout(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
-        for directory in (self.keys_dir, self.titles_dir, self.jobs_dir, self.artifacts_dir, self.logs_dir):
+        for directory in (
+            self.keys_dir,
+            self.titles_dir,
+            self.jobs_dir,
+            self.artifacts_dir,
+            self.logs_dir,
+        ):
             directory.mkdir(parents=True, exist_ok=True)
         if sys.platform != "win32":
             os.chmod(self.keys_dir, 0o700)
@@ -323,11 +333,12 @@ class StateStore:
                 candidates.append(candidate)
 
         self._migrate_keys(candidates, report)
-        self._migrate_pickle(
-            pickle_path if pickle_path is not None else Path(constants.LEGACY_GUI_PICKLE).expanduser(),
-            load_pickle=load_pickle,
-            report=report,
+        legacy_pickle = (
+            pickle_path
+            if pickle_path is not None
+            else Path(constants.LEGACY_GUI_PICKLE).expanduser()
         )
+        self._migrate_pickle(legacy_pickle, load_pickle=load_pickle, report=report)
         return report
 
     def _migrate_keys(self, candidates: list[Path], report: MigrationReport) -> None:
@@ -400,4 +411,6 @@ class StateStore:
                 self.set_last_device(preferred)
                 report.last_device = preferred
             else:
-                report.skipped.append(f"preferred device {preferred!r} not in registry or already set")
+                report.skipped.append(
+                    f"preferred device {preferred!r} not in registry or already set"
+                )

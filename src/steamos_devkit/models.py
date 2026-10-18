@@ -5,12 +5,12 @@ ISO-8601 UTC. Job ids are ``job_<ulid>`` and artifact ids ``art_<ulid>``
 (ULID via ulid-py).
 """
 
+import warnings
 from datetime import datetime
 from enum import StrEnum
 from ipaddress import IPv4Address
 from pathlib import Path
 from typing import Annotated, Literal
-import warnings
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
