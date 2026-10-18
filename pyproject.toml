@@ -24,6 +24,7 @@ dev = [
     "pytest-cov>=5",
     "pytest-mock>=3.14",
     "ruff>=0.6",
+    "types-paramiko>=5.0.0.20261006",
 ]
 
 [build-system]

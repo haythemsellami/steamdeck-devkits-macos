@@ -942,6 +942,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "ruff" },
+    { name = "types-paramiko" },
 ]
 
 [package.metadata]
@@ -962,6 +963,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=5" },
     { name = "pytest-mock", specifier = ">=3.14" },
     { name = "ruff", specifier = ">=0.6" },
+    { name = "types-paramiko", specifier = ">=5.0.0.20261006" },
 ]
 
 [[package]]
@@ -1031,6 +1033,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/03/51/d33db42cc72ffd8c30777547b42d01f0cbf9d95a770457698d0174b3ed71/typer-0.27.3.tar.gz", hash = "sha256:d0396f770a560ab1b0a8504e13b5f254b728cedb05c61cf0359e944e50ce8901", size = 205303, upload-time = "2026-10-06T17:24:16.61Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl", hash = "sha256:e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff", size = 123312, upload-time = "2026-10-06T17:24:15.054Z" },
+]
+
+[[package]]
+name = "types-paramiko"
+version = "5.0.0.20261006"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/24/f8/20ba9700d1d54dd4039ef790cfb53036a594f604a423067121f92b48463e/types_paramiko-5.0.0.20261006.tar.gz", hash = "sha256:318172c09ddae6a68292786b6ebd573c26a855b42a3a86cca4c232a7c11b256a", size = 28733, upload-time = "2026-10-06T08:15:47.679Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/b9/a25ff2092ecae398ce1002692417e9170756178c00490483e969719054d0/types_paramiko-5.0.0.20261006-py3-none-any.whl", hash = "sha256:1de443c560c946339ee1586edeb1d0155432fdaa4cde23096b6016a2c4935a54", size = 37163, upload-time = "2026-10-06T08:15:46.77Z" },
 ]
 
 [[package]]
