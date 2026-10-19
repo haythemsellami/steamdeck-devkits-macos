@@ -27,7 +27,7 @@ Hardware tests: `tests/hardware/` runs only when `DEVKIT_TEST_DEVICE=<name-or-ip
 
 ## Repo layout
 
-- `src/steamos_devkit/` — package (`core.py`, `models.py`, `errors.py`, `config.py`, `constants.py`, `device.py`, `artifacts.py`, `jobs/`, `adapters/`, `cli/`, `mcp_server.py` (M4), `_vendor/`)
+- `src/steamos_devkit/` — package (`core.py`, `models.py`, `errors.py`, `config.py`, `constants.py`, `device.py`, `artifacts.py`, `jobs/`, `adapters/`, `cli/`, `mcp_server.py`, `_vendor/`)
 - `tests/` — `unit/`, `integration/` (fake-SSH harness), `hardware/`, `fixtures/` (golden files)
 - `scripts/` — `sync-upstream.sh`, `run-gates.sh`, packaging/notarization scripts
 - `app/` — SwiftUI GUI + packaging (from M7; spike scaffolding from M0.5)

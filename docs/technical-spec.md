@@ -362,7 +362,9 @@ Built from probes, never hardcoded:
 
 ## 10. CLI (`cli.py`, typer)
 
-Global flags: `--json` (auto-default when stdout is not a TTY), `-d/--device`, `--timeout`, `--state-dir`, `--verbose`. Long ops wait by default; `--no-wait` prints the job id and exits 0; `devkit jobs wait <id>` blocks and exits with the job's outcome code.
+Global flags: `--json` (auto-default when stdout is not a TTY), `--timeout`, `--state-dir`, `--verbose`. Long ops wait by default; `--no-wait` prints the job id and exits 0; `devkit jobs wait <id>` blocks and exits with the job's outcome code.
+
+Selector convention (wave-3 standardization): every device command takes an OPTIONAL `<sel>` positional falling back to the last-device marker (`VALIDATION`, exit 2, when neither exists); `deploy` takes `--device/-d` instead (its two trailing positionals make an optional middle one ambiguous). The synopsis below shows the explicit `<sel>` forms.
 
 ```
 devkit doctor
@@ -540,3 +542,11 @@ Emulator, SteamOS fork, game manager, reverse engineering, automatic optimizatio
 - SFTP sidecar writes use absolute paths (`/home/<login>/devkit-game/…`); shell command paths keep the tilde unquoted.
 - SFTP-side `DeviceCapabilities` probes beyond the status model feed only the operations matrix.
 - Open: CLI selector defaulting is inconsistent between command modules (device commands fall back to last-device; titles/deploy require a positional) — standardized to optional-with-last-device-fallback in wave 3.
+
+### Wave-3 review deltas (2026-10-19)
+
+- §10: selector convention standardized — optional `<sel>` positional with last-device fallback everywhere; `deploy` takes `--device/-d` (trailing positionals make an optional middle one ambiguous). Synopsis text updated.
+- §11: built on `mcp` SDK 2.3.0 — FastMCP is renamed `MCPServer`; job progress bridges via connection-level `notifications/progress` polling the journal (0.5 s), not per-request callbacks (the SDK drops those after the tool response — the M7 GUI must consume progress via a notification handler); per-artifact MIME types via a `ResourceTemplate` subclass (no public instance registration in 2.3.0 — flagged in code, locked by tests).
+- §8 diagnostics: `fetch_logs` registers one artifact per requested kind (keeps `artifacts list --kind` meaningful); Deck screenshot picks the lexicographic max of candidates (gamescope timestamped names sort chronologically — matters for mode 2's per-layer files); controller-config polls for `config_*.vdf` (≤ 10 s) before pulling.
+- Known limitation: `JobHandle.wait()` rebuilds DevkitError from the journal and drops `remote_exit_code` (message survives).
+- `cli/` duplication candidates noted for later promotion into `cli/common.py`: the wait-or-print-job-id helper and gameid positional shuffle.
