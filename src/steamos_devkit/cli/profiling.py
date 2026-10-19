@@ -9,7 +9,7 @@ import typer
 
 from steamos_devkit import constants
 from steamos_devkit import profiling as ops
-from steamos_devkit.cli.common import die, emit, get_options, make_core
+from steamos_devkit.cli.common import die, emit, get_options, make_core, resolve_selector
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.jobs import JobHandle
 from steamos_devkit.models import Result
@@ -19,6 +19,21 @@ renderdoc_app = typer.Typer(
     help="RenderDoc capture layer and replay server.",
     no_args_is_help=True,
 )
+
+_SEL_HELP = "Device selector (registry name, IP, or hostname; default: last device)."
+
+
+def _shift(sel: str | None, value: str | None, name: str) -> tuple[str | None, str]:
+    """``<sel> <value>`` positionals with an optional selector.
+
+    One positional given is the value (device falls back to the last-device
+    marker); two given means the first is the device.
+    """
+    if value is not None:
+        return sel, value
+    if sel is None:
+        raise DevkitError(ErrorCode.VALIDATION, f"missing {name} argument")
+    return None, sel
 
 
 def _parse_on_off(ctx: typer.Context, value: str) -> bool:
@@ -56,7 +71,7 @@ def _start_job(ctx: typer.Context, job: JobHandle, *, wait: bool) -> None:
 
 def _gpu_trace(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector (registry name, IP, or hostname)."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
     timeout: int = typer.Option(
         constants.TIMEOUT_GPU_TRACE_S, "--timeout", help="Job timeout in seconds."
     ),
@@ -65,7 +80,7 @@ def _gpu_trace(
     """Capture a GPU system trace on the device into a zip artifact."""
     core = make_core(ctx)
     try:
-        job = ops.gpu_trace(core, sel, timeout_s=timeout)
+        job = ops.gpu_trace(core, resolve_selector(ctx, sel), timeout_s=timeout)
     except DevkitError as err:
         die(err, get_options(ctx).json)
     _start_job(ctx, job, wait=not no_wait)
@@ -73,7 +88,7 @@ def _gpu_trace(
 
 def _rgp(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector (registry name, IP, or hostname)."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
     timeout: int = typer.Option(
         constants.TIMEOUT_RGP_S, "--timeout", help="Job timeout in seconds."
     ),
@@ -82,7 +97,7 @@ def _rgp(
     """Trigger an RGP capture and download it once the write stabilizes."""
     core = make_core(ctx)
     try:
-        job = ops.rgp_capture(core, sel, timeout_s=timeout)
+        job = ops.rgp_capture(core, resolve_selector(ctx, sel), timeout_s=timeout)
     except DevkitError as err:
         die(err, get_options(ctx).json)
     _start_job(ctx, job, wait=not no_wait)
@@ -90,13 +105,14 @@ def _rgp(
 
 def _perf_overlay(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector."),
-    state: str = typer.Argument(..., metavar="on|off", help="on shows the overlay."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
+    state: str | None = typer.Argument(None, metavar="on|off", help="on shows the overlay."),
 ) -> None:
     """Toggle the MangoHud performance overlay."""
-    enabled = _parse_on_off(ctx, state)
     try:
-        result = ops.set_perf_overlay(make_core(ctx), sel, enabled)
+        device, state = _shift(sel, state, "on|off")
+        enabled = _parse_on_off(ctx, state)
+        result = ops.set_perf_overlay(make_core(ctx), resolve_selector(ctx, device), enabled)
     except DevkitError as err:
         die(err, get_options(ctx).json)
     _emit_result(ctx, result)
@@ -104,13 +120,14 @@ def _perf_overlay(
 
 def _frametimes(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector."),
-    state: str = typer.Argument(..., metavar="on|off", help="on starts MangoHud logging."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
+    state: str | None = typer.Argument(None, metavar="on|off", help="on starts MangoHud logging."),
 ) -> None:
     """Toggle MangoHud frametime logging (fetch CSVs via logs --kind frametimes)."""
-    enabled = _parse_on_off(ctx, state)
     try:
-        result = ops.set_frametime_logging(make_core(ctx), sel, enabled)
+        device, state = _shift(sel, state, "on|off")
+        enabled = _parse_on_off(ctx, state)
+        result = ops.set_frametime_logging(make_core(ctx), resolve_selector(ctx, device), enabled)
     except DevkitError as err:
         die(err, get_options(ctx).json)
     _emit_result(ctx, result)
@@ -118,13 +135,16 @@ def _frametimes(
 
 def _renderdoc_layer(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector."),
-    state: str = typer.Argument(..., metavar="on|off", help="on enables the capture layer."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
+    state: str | None = typer.Argument(
+        None, metavar="on|off", help="on enables the capture layer."
+    ),
 ) -> None:
     """Toggle the RenderDoc Vulkan capture layer flag."""
-    enabled = _parse_on_off(ctx, state)
     try:
-        result = ops.set_renderdoc_layer(make_core(ctx), sel, enabled)
+        device, state = _shift(sel, state, "on|off")
+        enabled = _parse_on_off(ctx, state)
+        result = ops.set_renderdoc_layer(make_core(ctx), resolve_selector(ctx, device), enabled)
     except DevkitError as err:
         die(err, get_options(ctx).json)
     _emit_result(ctx, result)
@@ -132,19 +152,19 @@ def _renderdoc_layer(
 
 def _renderdoc_server(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector."),
-    action: str = typer.Argument(..., metavar="start|stop|status", help="Server action."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
+    action: str | None = typer.Argument(None, metavar="start|stop|status", help="Server action."),
 ) -> None:
     """Start, stop, or query the RenderDoc replay server."""
-    lowered = action.lower()
-    if lowered not in ("start", "stop", "status"):
-        die(
-            DevkitError(ErrorCode.VALIDATION, f"expected start|stop|status, got {action!r}"),
-            get_options(ctx).json,
-        )
     try:
+        device, action = _shift(sel, action, "start|stop|status")
+        lowered = action.lower()
+        if lowered not in ("start", "stop", "status"):
+            raise DevkitError(ErrorCode.VALIDATION, f"expected start|stop|status, got {action!r}")
         result = ops.renderdoc_server(
-            make_core(ctx), sel, cast(Literal["start", "stop", "status"], lowered)
+            make_core(ctx),
+            resolve_selector(ctx, device),
+            cast(Literal["start", "stop", "status"], lowered),
         )
     except DevkitError as err:
         die(err, get_options(ctx).json)
@@ -153,17 +173,21 @@ def _renderdoc_server(
 
 def _proton_log(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector."),
-    state: str = typer.Argument(..., metavar="on|off", help="on writes PROTON_LOG=1."),
+    sel: str | None = typer.Argument(None, help=_SEL_HELP),
+    state: str | None = typer.Argument(None, metavar="on|off", help="on writes PROTON_LOG=1."),
     winedebug: str | None = typer.Option(
         None, "--winedebug", help="Also write this WINEDEBUG value string."
     ),
 ) -> None:
     """Toggle Proton logging on the device."""
-    enabled = _parse_on_off(ctx, state)
     try:
+        device, state = _shift(sel, state, "on|off")
+        enabled = _parse_on_off(ctx, state)
         result = ops.set_proton_logging(
-            make_core(ctx), sel, "on" if enabled else "off", winedebug=winedebug
+            make_core(ctx),
+            resolve_selector(ctx, device),
+            "on" if enabled else "off",
+            winedebug=winedebug,
         )
     except DevkitError as err:
         die(err, get_options(ctx).json)

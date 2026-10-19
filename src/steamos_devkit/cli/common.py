@@ -93,6 +93,23 @@ def make_core(ctx: typer.Context) -> DevkitCore:
     return DevkitCore(state_dir=get_options(ctx).state_dir)
 
 
+def resolve_selector(ctx: typer.Context, selector: str | None) -> str:
+    """Explicit selector wins; otherwise the last-device marker (spec section 5).
+
+    Every device-taking command resolves through here so the CLI defaults
+    consistently to the device last paired with or addressed.
+    """
+    if selector is not None:
+        return selector
+    last = make_core(ctx).state.last_device
+    if last is None:
+        raise DevkitError(
+            ErrorCode.VALIDATION,
+            "no device given and no last device; pass a device or run `devkit pair`",
+        )
+    return last
+
+
 def emit(ctx: typer.Context, payload_json: str, human: str) -> None:
     """JSON goes to stdout alone; human text goes to stdout only on a TTY."""
     if get_options(ctx).json:

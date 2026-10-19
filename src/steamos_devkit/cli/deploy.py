@@ -1,4 +1,11 @@
-"""``devkit deploy`` (spec section 10): preview or run the deploy pipeline."""
+"""``devkit deploy`` (spec section 10): preview or run the deploy pipeline.
+
+The device is a ``--device/-d`` option here, not an optional leading
+positional: ``deploy [<sel>] <gameid> <source_dir>`` would be ambiguous (with
+two positionals given, a parser cannot tell whether the first is the device or
+the gameid), so the selector moves to a flag and falls back to the
+last-device marker when omitted.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +17,7 @@ import typer
 from pydantic import ValidationError
 
 from steamos_devkit import constants
-from steamos_devkit.cli.common import die, emit, get_options, make_core
+from steamos_devkit.cli.common import die, emit, get_options, make_core, resolve_selector
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import DeploySpec, FilterSpec
 from steamos_devkit.titles import deploy as deploy_job
@@ -21,9 +28,14 @@ _FILTER_MODES = ("exclude", "include", "raw")
 
 def _deploy(
     ctx: typer.Context,
-    sel: str = typer.Argument(..., help="Device selector (registry name, IP, or hostname)."),
     gameid: str = typer.Argument(...),
     source_dir: Path = typer.Argument(..., help="Local build tree to upload."),
+    device: str | None = typer.Option(
+        None,
+        "--device",
+        "-d",
+        help="Device selector (registry name, IP, or hostname; default: last device).",
+    ),
     preview: bool = typer.Option(
         False, "--preview", help="Dry-run only: show what would change, touch nothing."
     ),
@@ -61,6 +73,7 @@ def _deploy(
     """Upload a build tree to a device, then optionally register and launch it."""
     core = make_core(ctx)
     try:
+        sel = resolve_selector(ctx, device)
         if filter_mode not in _FILTER_MODES:
             raise DevkitError(
                 ErrorCode.VALIDATION,

@@ -298,7 +298,15 @@ class TestDeployCli:
         )
         result = runner.invoke(
             cli.app,
-            ["--state-dir", str(state_dir), "deploy", "deck", GAMEID, str(_source_tree(tmp_path))],
+            [
+                "--state-dir",
+                str(state_dir),
+                "deploy",
+                GAMEID,
+                str(_source_tree(tmp_path)),
+                "-d",
+                "deck",
+            ],
         )
         assert result.exit_code == 0, result.output
         payload = json.loads(result.stdout)
@@ -323,9 +331,10 @@ class TestDeployCli:
                 "--state-dir",
                 str(state_dir),
                 "deploy",
-                "deck",
                 GAMEID,
                 str(_source_tree(tmp_path)),
+                "--device",
+                "deck",
                 "--no-wait",
             ],
         )
@@ -345,9 +354,10 @@ class TestDeployCli:
                 "--state-dir",
                 str(state_dir),
                 "deploy",
-                "deck",
                 GAMEID,
                 str(_source_tree(tmp_path)),
+                "--device",
+                "deck",
                 "--filter-mode",
                 "bogus",
             ],
@@ -360,7 +370,15 @@ class TestDeployCli:
         _make_core(state_dir, monkeypatch, _fake_rsync(tmp_path / "bin", tmp_path / "a.log", ""))
         result = runner.invoke(
             cli.app,
-            ["--state-dir", str(state_dir), "deploy", "deck", GAMEID, str(tmp_path / "missing")],
+            [
+                "--state-dir",
+                str(state_dir),
+                "deploy",
+                GAMEID,
+                str(tmp_path / "missing"),
+                "-d",
+                "deck",
+            ],
         )
         assert result.exit_code == 2
 
@@ -370,7 +388,15 @@ class TestDeployCli:
         _make_core(state_dir, monkeypatch, _fake_rsync(tmp_path / "bin", tmp_path / "a.log", ""))
         result = runner.invoke(
             cli.app,
-            ["--state-dir", str(state_dir), "deploy", "deck", "steam", str(_source_tree(tmp_path))],
+            [
+                "--state-dir",
+                str(state_dir),
+                "deploy",
+                "steam",
+                str(_source_tree(tmp_path)),
+                "-d",
+                "deck",
+            ],
         )
         assert result.exit_code == 10  # UNSUPPORTED
 
@@ -392,9 +418,10 @@ class TestDeployCli:
                 "--state-dir",
                 str(state_dir),
                 "deploy",
-                "deck",
                 GAMEID,
                 str(_source_tree(tmp_path)),
+                "--device",
+                "deck",
                 "--preview",
             ],
         )
@@ -409,7 +436,15 @@ class TestDeployCli:
         _make_core(state_dir, monkeypatch, _fake_rsync(tmp_path / "bin", tmp_path / "a.log", ""))
         result = runner.invoke(
             cli.app,
-            ["--state-dir", str(state_dir), "deploy", "deck", "1bad", str(_source_tree(tmp_path))],
+            [
+                "--state-dir",
+                str(state_dir),
+                "deploy",
+                "1bad",
+                str(_source_tree(tmp_path)),
+                "-d",
+                "deck",
+            ],
         )
         assert result.exit_code == 2  # pydantic DeploySpec rejection maps to VALIDATION
 
@@ -429,9 +464,10 @@ class TestDeployCli:
                 "--state-dir",
                 str(state_dir),
                 "deploy",
-                "deck",
                 GAMEID,
                 str(_source_tree(tmp_path)),
+                "-d",
+                "deck",
                 "--preview",
             ],
         )
