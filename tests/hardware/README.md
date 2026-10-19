@@ -16,6 +16,11 @@ Prerequisites: the device is on the same LAN, developer mode is enabled, and
 the device is already paired (or the pairing prompt is within reach — the
 pair test requires approving the on-device modal within the timeout).
 
+Modules run in a fixed order (pair first, destructive sweep last), not in
+pytest's alphabetical order; see `_MODULE_ORDER` in `conftest.py`. Every test
+prints a one-line `[hardware-matrix] <test>: pass key=value...` summary —
+transcribe those lines into `docs/hardware-matrix.md` after the run.
+
 ## Safety rules
 
 - Destructive tests (deploy, delete, failed-launch, disconnect, resume) use
