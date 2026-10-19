@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 devkit = "steamos_devkit.cli:main"
+devkit-mcp = "steamos_devkit.cli.mcp:run"
 
 [dependency-groups]
 dev = [

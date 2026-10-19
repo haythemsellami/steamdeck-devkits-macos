@@ -62,6 +62,7 @@ from steamos_devkit.cli import jobs  # noqa: E402
 from steamos_devkit.cli import titles  # noqa: E402
 from steamos_devkit.cli import device  # noqa: E402
 from steamos_devkit.cli import diagnostics  # noqa: E402
+from steamos_devkit.cli import mcp  # noqa: E402
 # isort: on
 
 meta.register(app)
@@ -72,6 +73,7 @@ deploy.register(app)
 jobs.register(app)
 device.register(app)
 diagnostics.register(app)
+mcp.register(app)
 # --- end command registration ---
 
 
