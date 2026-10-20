@@ -79,7 +79,7 @@ class TestListTitles:
     def test_lists_titles_with_exact_command(self, core: DevkitCore, ssh: FakeSSHClient) -> None:
         titles = list_titles(core, "deck")
         assert [t.gameid for t in titles] == [GAMEID, "spacegame_dev"]
-        assert all(t.registered_with_steam for t in titles)
+        assert all(t.registered_with_steam is None for t in titles)
         assert "python3 ~/devkit-utils/steamos-list-games" in ssh.commands_run
 
     def test_malformed_payload_raises(

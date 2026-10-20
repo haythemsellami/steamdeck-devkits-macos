@@ -98,7 +98,10 @@ class Title(BaseModel):
     """A deployed devkit title, from ``steamos-list-games`` plus sidecars."""
 
     gameid: GameId
-    registered_with_steam: bool
+    # None: registration is not knowable from the device helpers — they list
+    # deployed directories; Steam registration lives behind the Steam pipe's
+    # list-shortcuts (devkit_utils/resolve.py), which they never call.
+    registered_with_steam: bool | None = None
     size_bytes: int | None = None
     modified: datetime | None = None
 
