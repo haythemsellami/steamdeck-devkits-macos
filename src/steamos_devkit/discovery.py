@@ -14,6 +14,7 @@ user.
 
 from __future__ import annotations
 
+import errno as errnomod
 import json
 import logging
 import queue
@@ -200,9 +201,10 @@ class DiscoveryService:
 
 
 def _permission_error(core: DevkitCore, cause: Exception) -> DevkitError:
-    # Local Network (TCC) is not programmatically readable on macOS; in a
-    # bundled app or MCP host a silent mDNS failure usually means the host app
-    # lacks the permission (spec section 12, decision D3). The guidance text is
+    # Local Network (TCC) is not programmatically readable on macOS; a
+    # permission-shaped socket error (EPERM/EACCES, e.g. zeroconf's sendto
+    # blocked by TCC) in a bundled app or MCP host means the host app lacks
+    # the permission (spec section 12, decision D3). The guidance text is
     # shared with `devkit doctor` (core owns the wording).
     from steamos_devkit.core import _LOCAL_NETWORK_GUIDANCE
 
@@ -210,8 +212,36 @@ def _permission_error(core: DevkitCore, cause: Exception) -> DevkitError:
     where = "your terminal" if context == "cli" else f"the {context} host"
     return DevkitError(
         ErrorCode.PERMISSION_LOCAL_NETWORK,
-        f"mDNS discovery failed for {where}. {_LOCAL_NETWORK_GUIDANCE}",
+        f"mDNS discovery was denied for {where}. {_LOCAL_NETWORK_GUIDANCE}",
         details={"context": context, "cause": f"{type(cause).__name__}: {cause}"},
+    )
+
+
+_PERMISSION_ERRNOS = frozenset({errnomod.EPERM, errnomod.EACCES})
+
+
+def _discovery_error(core: DevkitCore, cause: Exception) -> DevkitError:
+    """Classify a zeroconf-level failure honestly (L4).
+
+    Only permission-shaped OS errors (EPERM/EACCES, the signature of a macOS
+    Local Network/TCC block on multicast sendto) map to
+    PERMISSION_LOCAL_NETWORK. Other OS-level failures — offline, no route,
+    multicast unavailable — are DEVICE_UNREACHABLE without claiming a TCC
+    block; non-OS failures are an internal error.
+    """
+    if isinstance(cause, OSError):
+        if cause.errno in _PERMISSION_ERRNOS:
+            return _permission_error(core, cause)
+        return DevkitError(
+            ErrorCode.DEVICE_UNREACHABLE,
+            f"mDNS discovery failed ({cause}); the host may be offline or "
+            "multicast may be unavailable on this network",
+            details={"cause": f"{type(cause).__name__}: {cause}"},
+        )
+    return DevkitError(
+        ErrorCode.INTERNAL,
+        f"mDNS discovery failed unexpectedly ({type(cause).__name__}: {cause})",
+        details={"cause": f"{type(cause).__name__}: {cause}"},
     )
 
 
@@ -221,7 +251,9 @@ def discover(
     """Browse for devkits for up to ``timeout_s`` seconds (spec section 8).
 
     Returns a (possibly empty) snapshot of announcements. A zeroconf-level
-    failure raises PERMISSION_LOCAL_NETWORK with the Local Network guidance.
+    failure is classified by cause (L4): permission-shaped socket errors raise
+    PERMISSION_LOCAL_NETWORK with the Local Network guidance; other OS-level
+    failures raise DEVICE_UNREACHABLE.
     """
     service = DiscoveryService()
     try:
@@ -230,7 +262,7 @@ def discover(
     except DevkitError:
         raise
     except Exception as e:
-        raise _permission_error(core, e) from e
+        raise _discovery_error(core, e) from e
     finally:
         service.close()
 

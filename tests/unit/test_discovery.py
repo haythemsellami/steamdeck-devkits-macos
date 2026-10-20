@@ -5,6 +5,7 @@ Zeroconf is always faked: tests never open real sockets.
 
 from __future__ import annotations
 
+import errno
 import json as jsonlib
 import socket
 from pathlib import Path
@@ -225,7 +226,9 @@ def test_zeroconf_failure_raises_permission_local_network(
     core: DevkitCore, monkeypatch: pytest.MonkeyPatch, context: str
 ) -> None:
     monkeypatch.setenv(constants.CONTEXT_ENV_VAR, context)
-    FakeZeroconf.construct_error = OSError("no multicast route")
+    # permission-shaped socket error (EPERM): the macOS Local Network / TCC
+    # signature on multicast sendto (L4 — only this errno class maps here)
+    FakeZeroconf.construct_error = PermissionError(errno.EPERM, "Operation not permitted")
     with pytest.raises(DevkitError) as exc_info:
         discovery.discover(core, timeout_s=0.01)
     assert exc_info.value.code == ErrorCode.PERMISSION_LOCAL_NETWORK
