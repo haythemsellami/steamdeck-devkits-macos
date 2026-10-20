@@ -226,6 +226,42 @@ def _capabilities(
     emit(ctx, caps.model_dump_json(), _render_capabilities(caps))
 
 
+def _shell(
+    ctx: typer.Context,
+    selector: str | None = typer.Argument(
+        None, help="Device name, IP, or hostname (default: last device)."
+    ),
+) -> None:
+    """Open an interactive SSH shell to the device in a new terminal window."""
+    core = make_core(ctx)
+    try:
+        device = core.resolve_device(_selector_or_last(core, selector))
+        key_path = core.state.key_path
+        if not key_path.exists():
+            raise DevkitError(ErrorCode.PAIRING_FAILED, "no devkit key; run `devkit pair` first")
+        ssh = core.adapter.ssh()
+        argv = [
+            str(ssh),
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-o",
+            "IdentitiesOnly=yes",
+            "-t",
+            "-i",
+            str(key_path),
+            f"{device.login}@{device.address}",
+        ]
+        core.adapter.terminal_launch(argv)
+        result = Result.success(
+            device=device, message=f"opened shell to {device.name} in a new terminal window"
+        )
+    except DevkitError as err:
+        die(err, get_options(ctx).json)
+    emit(ctx, result.model_dump_json(), result.message or "shell opened")
+
+
 def register(app: typer.Typer) -> None:
     devices_app = typer.Typer(help="Local device registry.", no_args_is_help=True)
     devices_app.command(name="list")(_devices_list)
@@ -235,3 +271,4 @@ def register(app: typer.Typer) -> None:
     app.command(name="pair")(_pair)
     app.command(name="status")(_status)
     app.command(name="capabilities")(_capabilities)
+    app.command(name="shell")(_shell)

@@ -67,6 +67,29 @@ def _version(ctx: typer.Context) -> None:
         print(f"{constants.CLI_COMMAND} {__version__}{suffix}")
 
 
+def _migrate(
+    ctx: typer.Context,
+    with_pickle: bool = typer.Option(
+        False,
+        "--with-pickle",
+        help="Also parse the legacy GUI settings.pickle (unsafe deserialization; off by default).",
+    ),
+) -> None:
+    """Import state from a legacy/upstream devkit install (one-way, non-destructive)."""
+    core = make_core(ctx)
+    try:
+        report = core.state.migrate_legacy(load_pickle=with_pickle)
+    except DevkitError as err:
+        die(err, get_options(ctx).json)
+    human = (
+        f"migration: keys {'imported' if report.keys_imported else 'not found'}; "
+        f"devices imported: {len(report.devices_imported)}; "
+        f"skipped: {len(report.skipped)}; pickle: {'yes' if report.pickle_loaded else 'no'}"
+    )
+    emit(ctx, report.model_dump_json(), human)
+
+
 def register(app: typer.Typer) -> None:
     app.command(name="doctor")(_doctor)
     app.command(name="version")(_version)
+    app.command(name="migrate")(_migrate)
