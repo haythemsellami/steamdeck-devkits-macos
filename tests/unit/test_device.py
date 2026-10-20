@@ -6,7 +6,7 @@ from pathlib import Path
 
 import paramiko
 import pytest
-from fake_ssh import make_paramiko_patch
+from fake_ssh import FakeSSHClient, make_paramiko_patch
 
 from steamos_devkit import constants
 from steamos_devkit.core import DevkitCore
@@ -131,6 +131,85 @@ def test_sftp_get(
     dest = tmp_path / "shot.png"
     core.device_handle("deck").sftp_get("/tmp/shot.png", dest)
     assert dest.read_bytes() == b"\x89PNG fake"
+
+
+class _ConnectFail:
+    """Minimal paramiko.SSHClient stand-in whose connect() raises."""
+
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+
+    def set_missing_host_key_policy(self, policy: object) -> None:
+        pass
+
+    def connect(self, *args: object, **kwargs: object) -> None:
+        raise self._exc
+
+
+def test_connect_auth_failure_maps_pairing_failed(
+    core: DevkitCore, paired_key: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _registry_device(core)
+    monkeypatch.setattr(
+        "paramiko.SSHClient",
+        lambda *a, **kw: _ConnectFail(paramiko.AuthenticationException("bad key")),
+    )
+    with pytest.raises(DevkitError) as exc_info:
+        core.device_handle("deck").run("true")
+    assert exc_info.value.code == ErrorCode.PAIRING_FAILED
+
+
+def test_connect_socket_timeout_maps_unreachable(
+    core: DevkitCore, paired_key: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _registry_device(core)
+    monkeypatch.setattr(
+        "paramiko.SSHClient", lambda *a, **kw: _ConnectFail(TimeoutError("connect"))
+    )
+    with pytest.raises(DevkitError) as exc_info:
+        core.device_handle("deck").run("true")
+    assert exc_info.value.code == ErrorCode.DEVICE_UNREACHABLE
+
+
+def test_exec_ssh_exception_maps_unreachable(
+    core: DevkitCore, paired_key: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _registry_device(core)
+    make_paramiko_patch(monkeypatch)
+
+    def boom(self: FakeSSHClient, command: str, **kwargs: object) -> None:
+        raise paramiko.SSHException("channel died")
+
+    monkeypatch.setattr(FakeSSHClient, "exec_command", boom)
+    with pytest.raises(DevkitError) as exc_info:
+        core.device_handle("deck").run("true")
+    assert exc_info.value.code == ErrorCode.DEVICE_UNREACHABLE
+
+
+def test_exec_channel_timeout_maps_timeout(
+    core: DevkitCore, paired_key: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _registry_device(core)
+    make_paramiko_patch(monkeypatch)
+
+    def slow(self: FakeSSHClient, command: str, **kwargs: object) -> None:
+        raise TimeoutError("channel read timed out")
+
+    monkeypatch.setattr(FakeSSHClient, "exec_command", slow)
+    with pytest.raises(DevkitError) as exc_info:
+        core.device_handle("deck").run("true", timeout=5)
+    assert exc_info.value.code == ErrorCode.TIMEOUT
+
+
+def test_sftp_missing_remote_file_maps_remote_failed(
+    core: DevkitCore, paired_key: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _registry_device(core)
+    make_paramiko_patch(monkeypatch, filesystem={})  # empty remote fs
+    with pytest.raises(DevkitError) as exc_info:
+        core.device_handle("deck").sftp_get("/tmp/absent.png", tmp_path / "out.png")
+    assert exc_info.value.code == ErrorCode.REMOTE_COMMAND_FAILED
+    assert exc_info.value.details["remote_path"] == "/tmp/absent.png"
 
 
 def _fake_rsync_script(directory: Path, version_output: str) -> Path:

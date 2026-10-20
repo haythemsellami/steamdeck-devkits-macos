@@ -131,12 +131,29 @@ class DeviceHandle:
         timeout: float | None = None,
         check: bool = True,
     ) -> RemoteResult:
-        """Run a remote command; nonzero exit raises when check is set."""
+        """Run a remote command; nonzero exit raises when check is set.
+
+        Only DevkitError crosses this boundary: transport failures during
+        exec/read map to DEVICE_UNREACHABLE, channel timeouts to TIMEOUT.
+        """
         with self.connect() as ssh:
-            _stdin, stdout, stderr = ssh.exec_command(command, timeout=timeout)
-            out = stdout.read().decode("utf-8", errors="replace")
-            err = stderr.read().decode("utf-8", errors="replace")
-            code = stdout.channel.recv_exit_status()
+            try:
+                _stdin, stdout, stderr = ssh.exec_command(command, timeout=timeout)
+                out = stdout.read().decode("utf-8", errors="replace")
+                err = stderr.read().decode("utf-8", errors="replace")
+                code = stdout.channel.recv_exit_status()
+            except TimeoutError as e:
+                raise DevkitError(
+                    ErrorCode.TIMEOUT,
+                    f"remote command timed out after {timeout}s: {command}",
+                    details={"command": command},
+                ) from e
+            except (OSError, paramiko.SSHException) as e:
+                raise DevkitError(
+                    ErrorCode.DEVICE_UNREACHABLE,
+                    f"connection lost during remote command: {command} ({e})",
+                    details={"command": command},
+                ) from e
         result = RemoteResult(exit_code=code, stdout=out, stderr=err)
         if check and code != 0:
             raise DevkitError(
@@ -160,21 +177,47 @@ class DeviceHandle:
                 remote_exit_code=result.exit_code,
             ) from e
 
-    def sftp_get(self, remote_path: str, local_path: Path) -> None:
+    def _sftp_call(self, op: str, remote_path: str, local_path: Path) -> None:
+        """One SFTP get/put with the same DevkitError-only boundary as run().
+
+        Transport failures map to DEVICE_UNREACHABLE, channel timeouts to
+        TIMEOUT; file-level errors (missing remote file, permissions) map to
+        REMOTE_COMMAND_FAILED.
+        """
         with self.connect() as ssh:
-            sftp = ssh.open_sftp()
             try:
-                sftp.get(remote_path, str(local_path))
-            finally:
-                sftp.close()
+                sftp = ssh.open_sftp()
+                try:
+                    if op == "get":
+                        sftp.get(remote_path, str(local_path))
+                    else:
+                        sftp.put(str(local_path), remote_path)
+                finally:
+                    sftp.close()
+            except TimeoutError as e:
+                raise DevkitError(
+                    ErrorCode.TIMEOUT,
+                    f"sftp {op} timed out: {remote_path}",
+                    details={"remote_path": remote_path},
+                ) from e
+            except paramiko.SSHException as e:
+                raise DevkitError(
+                    ErrorCode.DEVICE_UNREACHABLE,
+                    f"connection lost during sftp {op}: {remote_path} ({e})",
+                    details={"remote_path": remote_path},
+                ) from e
+            except OSError as e:
+                raise DevkitError(
+                    ErrorCode.REMOTE_COMMAND_FAILED,
+                    f"sftp {op} failed for {remote_path}: {e}",
+                    details={"remote_path": remote_path, "local_path": str(local_path)},
+                ) from e
+
+    def sftp_get(self, remote_path: str, local_path: Path) -> None:
+        self._sftp_call("get", remote_path, local_path)
 
     def sftp_put(self, local_path: Path, remote_path: str) -> None:
-        with self.connect() as ssh:
-            sftp = ssh.open_sftp()
-            try:
-                sftp.put(str(local_path), remote_path)
-            finally:
-                sftp.close()
+        self._sftp_call("put", remote_path, local_path)
 
     def ensure_utils(self) -> None:
         """rsync the vendored devkit-utils tree to ~/devkit-utils (audit section 1a)."""
