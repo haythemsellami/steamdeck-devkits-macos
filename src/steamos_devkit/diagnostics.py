@@ -372,7 +372,7 @@ def _screenshot_deck(
     )
     deadline = time.monotonic() + _SCREENSHOT_APPEAR_TIMEOUT_S
     remote_path: str | None = None
-    while remote_path is None:
+    while True:  # polls until the file appears or the deadline expires (L12)
         ctx.check_cancelled()
         found = handle.run(_FIND_SCREENSHOT, check=False)
         candidates = [line.strip() for line in found.stdout.splitlines() if line.strip()]
