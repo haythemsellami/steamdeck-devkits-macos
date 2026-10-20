@@ -1,5 +1,6 @@
 """Unit tests for jobs.runner (spec section 7.2)."""
 
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -116,7 +117,9 @@ def _emit_and_finish(ctx: JobContext, lines: list[str]) -> None:
 def test_recovery_sweep_on_construction(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs")
     stale = store.create(kind=JobKind.DEPLOY)
-    store.start(stale.id, 4242)
+    proc = subprocess.Popen([sys.executable, "-c", "pass"])
+    proc.wait()
+    store.start(stale.id, proc.pid)  # reaped above: definitely dead
     runner = JobRunner(store)
     assert runner.recovered == [stale.id]
     runner.shutdown()
