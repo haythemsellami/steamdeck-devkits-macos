@@ -354,9 +354,16 @@ class StateStore:
             self.ensure_layout()
             for src, dst in ((legacy_key, self.key_path), (legacy_pub, self.pubkey_path)):
                 if src.exists():
-                    dst.write_bytes(src.read_bytes())
-                    if sys.platform != "win32":
-                        os.chmod(dst, 0o400)
+                    data = src.read_bytes()
+                    # spec section 3: keys are created O_EXCL at mode 0400 —
+                    # no window where a private key exists with weaker perms.
+                    try:
+                        with os.fdopen(
+                            os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400), "wb"
+                        ) as fh:
+                            fh.write(data)
+                    except FileExistsError:
+                        report.skipped.append(f"kept existing {dst}")
             report.keys_imported = True
             logger.info("imported legacy devkit key from %s", legacy_key)
             return
