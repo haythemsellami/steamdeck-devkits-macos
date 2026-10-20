@@ -90,6 +90,35 @@ def test_malformed_journal(store: JobStore) -> None:
     assert exc_info.value.code == ErrorCode.STATE_CORRUPT
 
 
+def test_load_accepts_matching_created_id(store: JobStore) -> None:
+    info = store.create(kind=JobKind.DEPLOY, device="deck")
+    loaded = store.load(info.id)
+    assert loaded.id == info.id
+
+
+def test_load_rejects_created_id_mismatch(store: JobStore) -> None:
+    a = store.create(kind=JobKind.DEPLOY)
+    b = store.create(kind=JobKind.DEPLOY)
+    path = store.path_for(a.id)
+    content = path.read_text(encoding="utf-8")
+    assert content.count(a.id) == 1
+    path.write_text(content.replace(a.id, b.id), encoding="utf-8")
+    with pytest.raises(DevkitError) as exc_info:
+        store.load(a.id)
+    assert exc_info.value.code == ErrorCode.STATE_CORRUPT
+
+
+def test_load_rejects_renamed_journal(store: JobStore) -> None:
+    a = store.create(kind=JobKind.DEPLOY)
+    b = store.create(kind=JobKind.DEPLOY)
+    # a's journal content under b's filename: recorded id != filename stem
+    renamed = store.path_for(a.id).read_text(encoding="utf-8")
+    store.path_for(b.id).write_text(renamed, encoding="utf-8")
+    with pytest.raises(DevkitError) as exc_info:
+        store.load(b.id)
+    assert exc_info.value.code == ErrorCode.STATE_CORRUPT
+
+
 def test_list_filters(store: JobStore) -> None:
     a = store.create(kind=JobKind.DEPLOY, device="deck")
     b = store.create(kind=JobKind.SCREENSHOT, device="frame")

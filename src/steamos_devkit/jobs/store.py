@@ -156,7 +156,9 @@ class JobStore:
 
         A malformed final line without a trailing newline is treated as a
         torn tail (process died mid-append, between write and fsync) and
-        ignored; corruption anywhere else is STATE_CORRUPT.
+        ignored; corruption anywhere else is STATE_CORRUPT. A created event
+        whose recorded id does not match the journal filename is corruption,
+        not a rename.
         """
         path = self.path_for(job_id)
         if not path.exists():
@@ -205,6 +207,12 @@ class JobStore:
             if not isinstance(job, dict) or "kind" not in job or "id" not in job:
                 raise DevkitError(
                     ErrorCode.STATE_CORRUPT, f"{path}:{lineno}: malformed created event"
+                )
+            if str(job["id"]) != path.stem:
+                raise DevkitError(
+                    ErrorCode.STATE_CORRUPT,
+                    f"{path}:{lineno}: created id {job['id']!r} does not match"
+                    f" the journal filename {path.stem!r}",
                 )
             try:
                 fields["kind"] = JobKind(job["kind"])
