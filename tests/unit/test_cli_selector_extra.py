@@ -125,7 +125,14 @@ class TestTitlesSelectorFallback:
         self, cli_state: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _with_last_device(cli_state)
-        make_paramiko_patch(monkeypatch, commands=[(r"cat .*-argv\.json", b'["run.sh"]', b"", 0)])
+        make_paramiko_patch(
+            monkeypatch,
+            commands=[
+                (r"cat .*-argv\.json", b'["run.sh"]', b"", 0),
+                # the other sidecars are absent; GNU cat's real answer (L3)
+                (r"^cat ", b"", b"cat: /home/deck/x: No such file or directory", 1),
+            ],
+        )
         result = runner.invoke(
             cli.app, ["--state-dir", str(cli_state), "titles", "inspect", GAMEID]
         )

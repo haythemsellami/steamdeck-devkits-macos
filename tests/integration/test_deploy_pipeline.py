@@ -161,6 +161,8 @@ class TestDeployPipeline:
             commands=[
                 (r"steamos-prepare-upload", PREPARE_JSON, b"", 0),
                 (r"create-shortcut", b'{"success": "ok"}', b"", 0),
+                # absent config sidecars, answered the way GNU cat answers (L3)
+                (r"^cat ", b"", b"cat: /home/deck/x: No such file or directory", 1),
             ],
         )
         config = TitleConfig(entrypoint="bin/run.sh", args=["-v"], runtime="proton-stable")

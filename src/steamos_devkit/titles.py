@@ -65,11 +65,21 @@ def _sidecar_sftp_path(handle: DeviceHandle, gameid: str, suffix: str) -> str:
 
 
 def _read_json_sidecar(handle: DeviceHandle, gameid: str, suffix: str) -> Any | None:
-    """``cat`` one sidecar; None when absent, DevkitError when malformed."""
+    """``cat`` one sidecar; None when absent, DevkitError when unreadable or
+    malformed. Absent means exactly the device's "No such file" answer (L3) —
+    other nonzero exits (permissions, …) are REMOTE_COMMAND_FAILED, not a
+    silent default."""
     path = _sidecar_command_path(gameid, suffix)
     result = handle.run(f"cat {path}", check=False)
     if result.exit_code != 0:
-        return None
+        if "No such file" in result.stderr:
+            return None
+        raise DevkitError(
+            ErrorCode.REMOTE_COMMAND_FAILED,
+            f"cannot read {path} on the device (exit {result.exit_code})",
+            details={"path": path, "stderr_tail": result.stderr[-500:]},
+            remote_exit_code=result.exit_code,
+        )
     try:
         return json.loads(result.stdout)
     except json.JSONDecodeError as e:
@@ -300,7 +310,12 @@ def _stored_config(core: DevkitCore, gameid: str) -> TitleConfig:
 
 
 def list_titles(core: DevkitCore, selector: str) -> list[Title]:
-    """``steamos-list-games``; listed titles are registered with Steam."""
+    """``steamos-list-games``: directories under ``~/devkit-game`` — *deployed*
+    titles. Steam registration is not knowable from the vendored helpers (L2:
+    the helper only lists directories; registration lives behind the Steam
+    pipe's ``list-shortcuts``, cf. ``devkit_utils/resolve.py``), so
+    ``registered_with_steam`` is a placeholder pending a ``bool | None``
+    model field — do not rely on it."""
     handle = core.device_handle(selector)
     handle.ensure_utils()
     data = handle.run_json(f"python3 {_UTILS_DIR}/steamos-list-games")
@@ -316,6 +331,8 @@ def list_titles(core: DevkitCore, selector: str) -> list[Title]:
                 f"malformed title entry from device: {entry!r}",
             )
         try:
+            # L2: registration status is unknowable from steamos-list-games;
+            # this placeholder becomes None when the model allows it.
             titles.append(Title(gameid=entry["gameid"], registered_with_steam=True))
         except ValidationError as e:
             raise DevkitError(
@@ -335,7 +352,9 @@ def inspect_title(core: DevkitCore, selector: str, gameid: str) -> TitleDetail:
     settings = _read_json_sidecar(handle, gameid, constants.SETTINGS_SIDECAR_SUFFIX)
     return TitleDetail(
         gameid=gameid,
-        registered_with_steam=True,  # sidecars under ~/devkit-game imply a deployed title
+        # L2: sidecars under ~/devkit-game prove a deploy, not a Steam
+        # registration; placeholder pending a `bool | None` model field.
+        registered_with_steam=True,
         config=_config_from_sidecars(gameid, argv, env, settings),
         remote_dir=constants.device_title_dir(gameid),
     )

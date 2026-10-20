@@ -67,7 +67,11 @@ def core(state_dir: Path, monkeypatch: pytest.MonkeyPatch) -> DevkitCore:
 def ssh(core: DevkitCore, monkeypatch: pytest.MonkeyPatch) -> FakeSSHClient:
     return make_paramiko_patch(
         monkeypatch,
-        commands=[(r"steamos-list-games", LIST_GAMES_JSON, b"", 0)],
+        commands=[
+            (r"steamos-list-games", LIST_GAMES_JSON, b"", 0),
+            # absent sidecars, answered the way GNU cat answers (L3)
+            (r"^cat ", b"", b"cat: /home/deck/x: No such file or directory", 1),
+        ],
     )
 
 
@@ -411,6 +415,8 @@ class TestTitlesCli:
             commands=[
                 (r"cat .*-argv\.json", b'["run.sh", "-v"]', b"", 0),
                 (r"cat .*-settings\.json", b'{"compat_tool": "lepton"}', b"", 0),
+                # the env sidecar is absent; GNU cat's real answer (L3)
+                (r"^cat ", b"", b"cat: /home/deck/x: No such file or directory", 1),
             ],
         )
         result = runner.invoke(
@@ -423,7 +429,13 @@ class TestTitlesCli:
 
     def test_titles_configure_full(self, state_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _prepare_cli_state(state_dir, monkeypatch)
-        ssh = make_paramiko_patch(monkeypatch)
+        ssh = make_paramiko_patch(
+            monkeypatch,
+            commands=[
+                # absent sidecars, answered the way GNU cat answers (L3)
+                (r"^cat ", b"", b"cat: /home/deck/x: No such file or directory", 1)
+            ],
+        )
         result = runner.invoke(
             cli.app,
             [
