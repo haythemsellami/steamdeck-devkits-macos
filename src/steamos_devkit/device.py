@@ -13,14 +13,17 @@ import json
 import logging
 import shlex
 import subprocess
+import threading
+import time
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 import paramiko
 
+from steamos_devkit import constants
 from steamos_devkit._vendor import utils_dir
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import Device
@@ -32,6 +35,15 @@ logger = logging.getLogger(__name__)
 
 _CONNECT_TIMEOUT_S = 5.0
 
+REMOTE_COMMAND_TIMEOUT_S: Final = 120
+"""Default per-command deadline for ``DeviceHandle.run``/``run_json`` (M7):
+blocking SSH commands without an explicit caller timeout must not hang
+forever. Callers with their own budget (e.g. the status probe's 15 s) keep
+passing it; job-level timeouts bound whole operations separately."""
+
+_ENSURE_UTILS_TIMEOUT_S: Final = 300
+"""Deadline for the local rsync that uploads devkit-utils (M7)."""
+
 
 @dataclass
 class RemoteResult:
@@ -42,20 +54,59 @@ class RemoteResult:
     stderr: str
 
 
+def _parse_selector_port(port_text: str, selector: str) -> int:
+    """Validate the ``:port`` suffix of an explicit selector (1-65535)."""
+    try:
+        port = int(port_text)
+    except ValueError:
+        raise DevkitError(
+            ErrorCode.VALIDATION,
+            f"invalid port in selector {selector!r}: {port_text!r} is not a number",
+            details={"selector": selector},
+        ) from None
+    if not 1 <= port <= 65535:
+        raise DevkitError(
+            ErrorCode.VALIDATION,
+            f"invalid port in selector {selector!r}: must be in range 1-65535",
+            details={"selector": selector},
+        )
+    return port
+
+
 def resolve_device(core: DevkitCore, selector: str) -> Device:
-    """Resolve a selector to a registry entry or a transient explicit device."""
+    """Resolve a selector to a registry entry or a transient explicit device.
+
+    Selector forms (spec section 8): an exact registry name; an IPv4 literal,
+    optionally with a ``:port`` suffix for the device HTTP service —
+    ``192.0.2.10:32001`` for port-forwarded kits (constants
+    DEVICE_HTTP_PORT_FORWARDED), defaulting to 32000; or a DNS hostname
+    containing a dot (hostnames carry no port suffix). Bare names fall back to
+    an mDNS lookup.
+    """
     entry = core.state.devices.get(selector)
     if entry is not None:
         return entry
+    address = selector
+    port = constants.DEVICE_HTTP_PORT_DEFAULT
+    if selector.count(":") == 1:
+        host, _, port_text = selector.partition(":")
+        try:
+            ipaddress.IPv4Address(host)
+        except ValueError:
+            pass  # not IPv4:port — fall through to normal handling
+        else:
+            address = host
+            port = _parse_selector_port(port_text, selector)
     try:
-        ipaddress.IPv4Address(selector)
+        ipaddress.IPv4Address(address)
         is_address = True
     except ValueError:
-        is_address = "." in selector
+        is_address = "." in address
     if is_address:
         return Device(
             name=selector,
-            address=selector,
+            address=address,
+            port=port,
             login="deck",
             added_via="explicit",
         )
@@ -78,9 +129,20 @@ def resolve_device(core: DevkitCore, selector: str) -> Device:
 class DeviceHandle:
     """Paramiko-based handle for one device (spec sections 4 and 8)."""
 
+    _utils_synced_at: ClassVar[dict[tuple[str, str], float]] = {}
+    """Successful devkit-utils syncs this process, keyed by
+    ``(state root, device address)``; values are monotonic timestamps for
+    debugging only (M3)."""
+    _utils_sync_lock: ClassVar[threading.Lock] = threading.Lock()
+
     def __init__(self, core: DevkitCore, device: Device) -> None:
         self._core = core
         self.device = device
+
+    @property
+    def core(self) -> DevkitCore:
+        """The owning core (read-only): state root, adapter, settings."""
+        return self._core
 
     @classmethod
     def for_selector(cls, core: DevkitCore, selector: str) -> DeviceHandle:
@@ -133,19 +195,24 @@ class DeviceHandle:
     ) -> RemoteResult:
         """Run a remote command; nonzero exit raises when check is set.
 
+        ``timeout=None`` applies the default per-command deadline
+        :data:`REMOTE_COMMAND_TIMEOUT_S` (M7) so a stuck channel cannot block
+        a caller forever; an explicit timeout is honored as-is.
+
         Only DevkitError crosses this boundary: transport failures during
         exec/read map to DEVICE_UNREACHABLE, channel timeouts to TIMEOUT.
         """
+        effective_timeout = timeout if timeout is not None else REMOTE_COMMAND_TIMEOUT_S
         with self.connect() as ssh:
             try:
-                _stdin, stdout, stderr = ssh.exec_command(command, timeout=timeout)
+                _stdin, stdout, stderr = ssh.exec_command(command, timeout=effective_timeout)
                 out = stdout.read().decode("utf-8", errors="replace")
                 err = stderr.read().decode("utf-8", errors="replace")
                 code = stdout.channel.recv_exit_status()
             except TimeoutError as e:
                 raise DevkitError(
                     ErrorCode.TIMEOUT,
-                    f"remote command timed out after {timeout}s: {command}",
+                    f"remote command timed out after {effective_timeout}s: {command}",
                     details={"command": command},
                 ) from e
             except (OSError, paramiko.SSHException) as e:
@@ -165,7 +232,9 @@ class DeviceHandle:
         return result
 
     def run_json(self, command: str, *, timeout: float | None = None) -> Any:
-        """Run a remote command whose stdout must be JSON."""
+        """Run a remote command whose stdout must be JSON.
+
+        ``timeout=None`` inherits the same default deadline as ``run``."""
         result = self.run(command, timeout=timeout)
         try:
             return json.loads(result.stdout)
@@ -219,8 +288,21 @@ class DeviceHandle:
     def sftp_put(self, local_path: Path, remote_path: str) -> None:
         self._sftp_call("put", remote_path, local_path)
 
-    def ensure_utils(self) -> None:
-        """rsync the vendored devkit-utils tree to ~/devkit-utils (audit section 1a)."""
+    def ensure_utils(self, force: bool = False) -> None:
+        """rsync the vendored devkit-utils tree to ~/devkit-utils (audit section 1a).
+
+        Synced once per process per ``(state root, device address)`` and
+        skipped on later calls (M3) — upstream syncs once per identify
+        (``:1919-1938``), not on every operation. The tradeoff: a long-lived
+        MCP server never re-syncs helpers mid-process; ``force=True``
+        re-uploads explicitly. Threadsafe via a class-level lock; two threads
+        racing a first sync may run two identical rsyncs (idempotent), and a
+        failed sync is never cached.
+        """
+        cache_key = (str(self._core.state.root), self.device.address)
+        with self._utils_sync_lock:
+            if not force and cache_key in self._utils_synced_at:
+                return
         rsync = self._core.adapter.rsync()
         if not rsync.ok or rsync.path is None:
             if rsync.flavor == "openrsync":
@@ -252,7 +334,23 @@ class DeviceHandle:
                 details={"stderr_tail": result.stderr[-500:]},
                 remote_exit_code=result.returncode,
             )
+        with self._utils_sync_lock:
+            self._utils_synced_at[cache_key] = time.monotonic()
 
     def _run_local(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        """Local-subprocess seam (tests patch this)."""
-        return subprocess.run(argv, capture_output=True, text=True, check=False)
+        """Local-subprocess seam (tests patch this); bounded by
+        ``_ENSURE_UTILS_TIMEOUT_S`` so a hung rsync cannot block forever (M7)."""
+        try:
+            return subprocess.run(
+                argv,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=_ENSURE_UTILS_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise DevkitError(
+                ErrorCode.TIMEOUT,
+                f"local command timed out after {_ENSURE_UTILS_TIMEOUT_S}s: {argv[0]}",
+                details={"argv": [str(a) for a in argv]},
+            ) from e

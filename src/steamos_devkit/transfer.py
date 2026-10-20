@@ -238,7 +238,7 @@ def upload_tree(ctx: JobContext, handle: DeviceHandle, spec: DeploySpec, remote_
     ``ctx.run_process``. Any nonzero exit — including the partial-transfer
     codes 23/24 — fails the job with REMOTE_COMMAND_FAILED.
     """
-    core = handle._core  # feature-module access to the handle's owning core
+    core = handle.core  # the handle's owning core (state root, adapter)
     argv = build_rsync_argv(
         rsync_path=require_rsync(core),
         ssh_path=core.adapter.ssh(),
