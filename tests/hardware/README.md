@@ -18,7 +18,9 @@ pair test requires approving the on-device modal within the timeout).
 
 Modules run in a fixed order (pair first, destructive sweep last), not in
 pytest's alphabetical order; see `_MODULE_ORDER` in `conftest.py`. Every test
-prints a one-line `[hardware-matrix] <test>: pass key=value...` summary —
+prints a one-line `[hardware-matrix] <test>: pass key=value...` summary AND
+appends it as JSON to `$DEVKIT_STATE_DIR/hardware-records.jsonl` (stdout is
+captured by pytest, so the JSONL file is the reliable channel) —
 transcribe those lines into `docs/hardware-matrix.md` after the run.
 
 ## Safety rules

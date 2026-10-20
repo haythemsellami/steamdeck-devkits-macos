@@ -88,6 +88,18 @@ otherwise `supported_untested` (or `dependency_required`, `unavailable_host`,
 a title, launch-readiness signals, title stdout streaming — are reported as
 `unsupported_upstream` rather than faked.
 
+## Troubleshooting
+
+**`discover` finds nothing / `pair` fails with "no route to host" (errno 65)
+while the Deck is clearly online.** macOS Local Network privacy is blocking
+the host app. Grant it under System Settings > Privacy & Security > Local
+Network. Two traps: the permission attaches to the *responsible app* (your
+terminal, or the MCP host app — e.g. Claude Desktop needs it too), and
+**tmux breaks the chain**: the tmux server daemonizes under launchd, so the
+grant never applies inside tmux. Run device commands outside tmux, or use a
+Terminal window via `scripts/run-hardware-matrix.sh`. `devkit setup` runs a
+short probe to surface the prompt early.
+
 ## Documentation map
 
 - [`overview.md`](overview.md) — product direction and agreed architecture

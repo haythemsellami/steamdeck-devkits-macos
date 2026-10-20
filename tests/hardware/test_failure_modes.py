@@ -62,7 +62,7 @@ def test_failed_launch_is_honest(
             # refuses — that IS the honest failure, arriving early
             assert err.code == ErrorCode.REMOTE_COMMAND_FAILED
             assert "doesn't exist" in err.message or "registration" in err.message.lower()
-            hwrecord("failed_launch", "pass", outcome="registration-refused")
+            hwrecord("failed_launch", "pass", detail="registration-refused")
             return
         assert info.state == JobState.SUCCEEDED
 
@@ -85,7 +85,7 @@ def test_failed_launch_is_honest(
     except Exception:
         force_delete(core, device_selector, hardware_gameid)
         raise
-    hwrecord("failed_launch", "pass", outcome=outcome, elapsed_s=round(elapsed, 1))
+    hwrecord("failed_launch", "pass", detail=outcome, elapsed_s=round(elapsed, 1))
 
 
 def test_interrupted_upload_then_redeploy(

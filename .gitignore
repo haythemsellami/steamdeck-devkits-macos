@@ -23,5 +23,8 @@ app/build/
 app/.runtime/
 app/.signing/
 
+# Local run logs (may contain lab IPs); matrix + records are the durable artifacts
+docs/hardware-runs/
+
 # Local devkit state during development
 .devkit-state/

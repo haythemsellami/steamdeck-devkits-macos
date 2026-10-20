@@ -94,16 +94,27 @@ HwRecord = Callable[..., None]
 
 
 @pytest.fixture
-def hwrecord() -> HwRecord:
-    """One-line summary per test, printed for the hardware-matrix recorder.
+def hwrecord(tmp_path: Path) -> HwRecord:
+    """One-line summary per test for the hardware-matrix recorder.
 
-    Format: ``[hardware-matrix] <test>: <outcome> key=value...`` — transcribe
-    these into docs/hardware-matrix.md after a run (see README.md here).
+    Printed AND appended to ``$DEVKIT_STATE_DIR/hardware-records.jsonl`` —
+    pytest captures stdout, so the file is the reliable channel. Transcribe
+    into docs/hardware-matrix.md after a run (see README.md here).
     """
 
     def _record(test: str, outcome: str, **details: object) -> None:
         suffix = "".join(f" {key}={value}" for key, value in details.items())
         print(f"[hardware-matrix] {test}: {outcome}{suffix}")
+        import json
+        import os
+        from datetime import UTC, datetime
+
+        state = os.environ.get("DEVKIT_STATE_DIR")
+        if state:
+            line = {"ts": datetime.now(UTC).isoformat(), "test": test, "outcome": outcome}
+            line.update(details)
+            with open(Path(state) / "hardware-records.jsonl", "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(line, default=str) + "\n")
 
     return _record
 

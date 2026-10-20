@@ -12,7 +12,7 @@ recorded green here for the current devkit commit; everything else stays
 
 | Run | macOS build | Arch | SteamOS build | Devkit commit | Date | Tester |
 |---|---|---|---|---|---|---|
-| (template) | e.g. 26.7.1 (25.x) | arm64 | e.g. 20251022.100 (3.7.17) | `abcdef12` | YYYY-MM-DD | name |
+| 1 | 26.7.1 (25G241) | arm64 | 3.8.28 (20260922.1), client 1791918634, stable | `488424b` | 2026-10-20 | haythem |
 
 ## Operation checklist (one row per run)
 
@@ -21,22 +21,28 @@ letter/number from the machine matrix in the Result cell, e.g. `pass (1)`.
 
 | Operation | Covers | Result | Notes |
 |---|---|---|---|
-| Pair | mDNS + explicit IP; on-device approval; 403 declined path | | |
-| Status | `devkit status` fields sane vs device | | |
-| Deploy Linux-native | `zz_devkit_test` Linux x86_64 test app upload + register | | |
-| Deploy Proton | `zz_devkit_test` Windows test app via `compat_tool=proton-*` | | |
-| Launch | `run-game` accepted; result distinguishes upload/register/launch, readiness `unknown` | | |
-| Logs | steam + proton log pull lands as artifacts, excerpt readable | | |
-| Screenshot | modes 1–4 as gamescope allows; artifact retrievable | | |
-| Failed-launch handling | broken binary: launch accepted, honest failure surfaced, no crash | | |
-| Disconnect mid-deploy | network drop during upload → job fails cleanly, no state corruption | | |
-| Interrupted upload + resume | kill -9 / Ctrl-C mid-upload → `interrupted` journal, resume completes via `--partial` | | |
-| GPU trace | `gpu-trace` capture → zip artifact | | |
-| RGP | trigger → stability loop → verified `.rgp` artifact | | |
-| MangoHud | perf overlay on/off; frametimes CSV pull | | |
-| RenderDoc | layer enable/disable; replay server start/status/stop | | |
-| Proton logs | `PROTON_LOG` on/off; `steam-*.log` filtered pull | | |
-| Session controls | session select gamescope/plasma; steam-mode OS/OS_DEV; reload steam | | |
+| Pair | mDNS + explicit IP; on-device approval; 403 declined path | pass (1) | explicit IP + approval; idempotent re-pair. mDNS discovery not exercised (host LAN permission blocked at the time) |
+| Status | `devkit status` fields sane vs device | pass (1) | SteamOS 3.8.28, stable branch, client 1791918634; fields parse into DeviceStatus incl. enum-prefix and list args |
+| Deploy Linux-native | `zz_devkit_test` Linux x86_64 test app upload + register | pass (1) | configure → preview → deploy → registered; found+fixed: sidecar write before `~/devkit-game` exists (488424b) |
+| Deploy Proton | `zz_devkit_test` Windows test app via `compat_tool=proton-*` | | not covered in run 1 |
+| Launch | `run-game` accepted; result distinguishes upload/register/launch, readiness `unknown` | pass (1) | launch accepted; readiness honestly `unknown` |
+| Logs | steam + proton log pull lands as artifacts, excerpt readable | pass (1) | steam logs artifact; found+fixed: excerpt reads file inside directory artifact (488424b) |
+| Screenshot | modes 1–4 as gamescope allows; artifact retrievable | pass (1) | mode 3 PNG verified by magic bytes |
+| Failed-launch handling | broken binary: launch accepted, honest failure surfaced, no crash | pass (1) | device refuses at registration (entrypoint validation) — honest early failure; test updated to accept it |
+| Disconnect mid-deploy | network drop during upload → job fails cleanly, no state corruption | pass (1) | unreachable-IP fail-fast covered (`DEVICE_UNREACHABLE` < 20 s); true mid-upload network drop not covered |
+| Interrupted upload + resume | kill -9 / Ctrl-C mid-upload → `interrupted` journal, resume completes via `--partial` | pass (1) | cancelled mid-transfer, journal `cancelled`, redeploy to success |
+| GPU trace | `gpu-trace` capture → zip artifact | | not covered in run 1 |
+| RGP | trigger → stability loop → verified `.rgp` artifact | | not covered in run 1 |
+| MangoHud | perf overlay on/off; frametimes CSV pull | | not covered in run 1 |
+| RenderDoc | layer enable/disable; replay server start/status/stop | | not covered in run 1 |
+| Proton logs | `PROTON_LOG` on/off; `steam-*.log` filtered pull | | not covered in run 1 |
+| Session controls | session select gamescope/plasma; steam-mode OS/OS_DEV; reload steam | | not covered in run 1 |
+
+Run 1 notes: also fixed from this run — connection-shaped rsync failures now
+map to `DEVICE_UNREACHABLE` (were masked as `REMOTE_COMMAND_FAILED`), and both
+rsync rsh strings carry `ConnectTimeout=10` so dead hosts fail fast (488424b).
+The `[hardware-matrix]` stdout lines were captured by pytest and lost; records
+now also append to `$DEVKIT_STATE_DIR/hardware-records.jsonl` (conftest fix).
 
 ## Run log
 
