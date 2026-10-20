@@ -176,6 +176,75 @@ class TestConfigureTitle:
         result = configure_title(core, "deck", GAMEID, TitleConfig(entrypoint="a/b/c.sh"))
         assert result.ok
 
+    def test_env_only_configure_preserves_device_config(self, core: DevkitCore, ssh) -> None:
+        # The device already has argv/settings sidecars; setting only env must
+        # not touch them (device-helper semantics: save_argv(None)/empty env skip).
+        result = configure_title(core, "deck", GAMEID, TitleConfig(env={"NEW": "1"}))
+        assert result.ok
+        fs = ssh.filesystem
+        assert json.loads(fs[f"/home/deck/devkit-game/{GAMEID}-env.json"]) == {"NEW": "1"}
+        assert f"/home/deck/devkit-game/{GAMEID}-argv.json" not in fs
+        assert f"/home/deck/devkit-game/{GAMEID}-settings.json" not in fs
+
+    def test_empty_configure_writes_nothing(self, core: DevkitCore, ssh: FakeSSHClient) -> None:
+        result = configure_title(core, "deck", GAMEID, TitleConfig())
+        assert result.ok
+        assert ssh.filesystem == {}
+
+    def test_settings_merge_over_device(
+        self, core: DevkitCore, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ssh = make_paramiko_patch(
+            monkeypatch,
+            commands=[
+                (
+                    rf"cat ~/devkit-game/{GAMEID}-settings\.json",
+                    b'{"steam_play": "1", "keep": "x"}\n',
+                    b"",
+                    0,
+                )
+            ],
+        )
+        configure_title(
+            core,
+            "deck",
+            GAMEID,
+            TitleConfig(settings={"steam_play": "0"}, runtime="proton-stable"),
+        )
+        merged = json.loads(ssh.filesystem[f"/home/deck/devkit-game/{GAMEID}-settings.json"])
+        assert merged == {"steam_play": "0", "keep": "x", "compat_tool": "proton-stable"}
+
+    def test_args_only_preserves_device_entrypoint(
+        self, core: DevkitCore, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ssh = make_paramiko_patch(
+            monkeypatch,
+            commands=[
+                (
+                    rf"cat ~/devkit-game/{GAMEID}-argv\.json",
+                    b'["bin/keep.sh", "--old"]\n',
+                    b"",
+                    0,
+                )
+            ],
+        )
+        configure_title(core, "deck", GAMEID, TitleConfig(args=["--new"]))
+        argv = json.loads(ssh.filesystem[f"/home/deck/devkit-game/{GAMEID}-argv.json"])
+        assert argv == ["bin/keep.sh", "--new"]
+
+    def test_entrypoint_replaces_whole_argv(
+        self, core: DevkitCore, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ssh = make_paramiko_patch(
+            monkeypatch,
+            commands=[
+                (rf"cat ~/devkit-game/{GAMEID}-argv\.json", b'["bin/old.sh", "--old"]\n', b"", 0)
+            ],
+        )
+        configure_title(core, "deck", GAMEID, TitleConfig(entrypoint="bin/new.sh"))
+        argv = json.loads(ssh.filesystem[f"/home/deck/devkit-game/{GAMEID}-argv.json"])
+        assert argv == ["bin/new.sh"]
+
 
 class TestRegisterTitle:
     def _register_command(self, ssh: FakeSSHClient) -> str:

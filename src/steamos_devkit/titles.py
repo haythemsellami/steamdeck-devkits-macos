@@ -138,22 +138,57 @@ def _validate_entrypoint(entrypoint: str | None) -> None:
         )
 
 
-def _config_sidecar_payloads(config: TitleConfig) -> dict[str, object]:
-    """JSON payloads for the three sidecars, keyed by sidecar suffix."""
-    argv = ([config.entrypoint] if config.entrypoint is not None else []) + list(config.args)
-    settings = dict(config.settings)
-    if config.runtime is not None:
-        settings["compat_tool"] = config.runtime
-    return {
-        constants.ARGV_SIDECAR_SUFFIX: argv,
-        constants.ENV_SIDECAR_SUFFIX: dict(config.env),
-        constants.SETTINGS_SIDECAR_SUFFIX: settings,
-    }
-
-
 def _write_config_sidecars(handle: DeviceHandle, gameid: str, config: TitleConfig) -> None:
-    """Upload all three sidecars via SFTP from local temp files."""
-    payloads = _config_sidecar_payloads(config)
+    """Write sidecars mirroring the device-helper semantics (audit section 1b):
+
+    - argv: written only when an entrypoint or extra args are supplied
+      (helper ``save_argv(None)`` skips); ``entrypoint=None`` preserves the
+      device's current argv[0], and supplied args replace the tail.
+    - env: written only when non-empty (helper ``save_env`` skips empty),
+      replacing wholesale when written.
+    - settings: merged over the device's current settings (helper
+      ``save_settings`` merges); ``runtime`` sets ``compat_tool``.
+
+    Every frontend gets the same behavior because the merge lives here, not
+    in the CLI/MCP layers — a call that sets only ``env`` can never clobber
+    the device's entrypoint or settings.
+    """
+    argv_suffix = constants.ARGV_SIDECAR_SUFFIX
+    env_suffix = constants.ENV_SIDECAR_SUFFIX
+    settings_suffix = constants.SETTINGS_SIDECAR_SUFFIX
+
+    payloads: dict[str, object] = {}
+
+    if config.entrypoint is not None or config.args:
+        current_argv = _read_json_sidecar(handle, gameid, argv_suffix)
+        device_argv = current_argv if isinstance(current_argv, list) else []
+        if config.entrypoint is not None:
+            head: str | None = config.entrypoint
+            tail: list[str] = list(config.args)
+        else:
+            head = device_argv[0] if device_argv and isinstance(device_argv[0], str) else None
+            tail = list(config.args)
+        payloads[argv_suffix] = ([head] if head is not None else []) + tail
+
+    if config.env:
+        payloads[env_suffix] = dict(config.env)
+
+    if config.settings or config.runtime is not None:
+        current_settings = _read_json_sidecar(handle, gameid, settings_suffix)
+        merged: dict[str, str] = {}
+        if isinstance(current_settings, dict):
+            merged.update(
+                {
+                    k: v
+                    for k, v in current_settings.items()
+                    if isinstance(k, str) and isinstance(v, str)
+                }
+            )
+        merged.update(config.settings)
+        if config.runtime is not None:
+            merged["compat_tool"] = config.runtime
+        payloads[settings_suffix] = merged
+
     with tempfile.TemporaryDirectory(prefix="devkit-title-") as tmp:
         for suffix, payload in payloads.items():
             local = Path(tmp) / f"{gameid}{suffix}"
