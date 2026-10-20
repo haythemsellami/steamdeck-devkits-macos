@@ -399,6 +399,21 @@ class JobInfo(BaseModel):
 # --- Diagnostics ---------------------------------------------------------------
 
 
+class SetupStep(BaseModel):
+    """One onboarding step outcome (`devkit setup`)."""
+
+    name: str
+    status: Literal["ok", "skipped", "warning", "error"]
+    summary: str
+
+
+class SetupReport(BaseModel):
+    """Result of `devkit setup` — ok when no step errored."""
+
+    ok: bool
+    steps: list[SetupStep] = Field(default_factory=list)
+
+
 class DoctorCheck(BaseModel):
     """One doctor() finding."""
 

@@ -37,6 +37,7 @@ ALL_OPERATIONS = {
     "list_artifacts",
     "read_artifact",
     "migrate",
+    "setup",
     "version",
     "shell",
     # device operations the upstream protocol supports

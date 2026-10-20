@@ -33,7 +33,10 @@ planned). For now, from a checkout:
 
 ```bash
 uv sync                 # install the locked environment (uv required)
-uv run devkit doctor    # verify rsync/ssh/terminal probes
+uv run devkit setup     # one-shot onboarding: keypair, rsync 3.x (installs via
+                        # Homebrew if missing), and a probe that surfaces the
+                        # macOS Local Network permission prompt
+uv run devkit doctor    # re-verify probes at any time
 ```
 
 ## Quickstart

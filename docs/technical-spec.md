@@ -372,6 +372,7 @@ Global flags: `--json` (auto-default when stdout is not a TTY), `--timeout`, `--
 Selector convention (wave-3 standardization): every device command takes an OPTIONAL `<sel>` positional falling back to the last-device marker (`VALIDATION`, exit 2, when neither exists); `deploy` takes `--device/-d` instead (its two trailing positionals make an optional middle one ambiguous). The synopsis below shows the explicit `<sel>` forms.
 
 ```
+devkit setup [--no-install] [--no-probe]
 devkit doctor
 devkit discover [--timeout 5]
 devkit devices list | forget <sel>
@@ -572,3 +573,8 @@ Reviewed codebase at 902e3d6; verified each finding against the tree before fixi
 - §8: `Title.registered_with_steam` is now `bool | None` — always None today because the device helpers cannot observe Steam registration (L2); sidecar reads distinguish "No such file" (absent) from other failures (REMOTE_COMMAND_FAILED) (L3); discovery maps only permission-shaped errno (EPERM/EACCES) to PERMISSION_LOCAL_NETWORK, other network failures to DEVICE_UNREACHABLE (L4); selectors accept `host:port` with range validation (L5); successful status refreshes registry `family` (L6); Deck screenshot poll loop restructured (L12).
 - §6/`DeviceHandle.run`: default 120 s per-command deadline when no explicit timeout is passed; `ensure_utils` local rsync capped at 300 s, mapping to TIMEOUT (M7 device half). `JobContext` gains `time_remaining()`/`deadline_exceeded`, `sleep` caps at the deadline, and `run_process(timeout_s=...)` kills the child group with TIMEOUT semantics (M7 jobs half).
 - §7.1: a journal whose created-event id does not match its filename is STATE_CORRUPT (L10); the rsync output pump splits bytes on raw `\r`/`\n` so split multibyte UTF-8 survives (L9); `cli.main()`'s crash path uses the callback's parsed Options for JSON mode instead of re-scanning argv (L11).
+
+### Hardware-onboarding additions (2026-10-20, first Deck contact)
+
+- Errno 65 (EHOSTUNREACH) on darwin is the macOS Local Network (TCC) denial signature for unsigned processes on LAN connects — verified against a real Deck (unicast TCP failed with 65 for Python while Apple-signed curl/nc passed; internet unaffected). `errors.map_network_oserror` maps it to PERMISSION_LOCAL_NETWORK with dual-cause guidance (offline device OR blocked permission), applied in pairing (properties + register), device SSH connect, and discovery's errno table. URLError's wrapped `.reason` is unwrapped before classification.
+- §10: new `devkit setup [--no-install] [--no-probe]` — one-shot onboarding: state layout, keypair generation (0400), rsync 3.x check with Homebrew install when missing, ssh/terminal probes, and on macOS a short mDNS probe that surfaces the Local Network prompt before first pairing. Exit 0 when no step errored, else 5. Added to the capabilities matrix as a host-local operation.

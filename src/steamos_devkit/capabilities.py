@@ -167,6 +167,7 @@ def _build_operations(
         "list_artifacts",
         "read_artifact",
         "migrate",
+        "setup",
         "version",
     ):
         add(name, "supported_untested")
