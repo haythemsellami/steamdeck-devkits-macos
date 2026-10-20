@@ -197,9 +197,10 @@ def test_tools_list_full_surface(server: MCPServer[None]) -> None:
                 "plasma-x11",
                 "plasma-wayland",
             ]
-            # destructive hint on delete, read-only on status
+            # destructive hint on delete; status is NOT read-only (M4: it
+            # uploads devkit-utils on first contact and refreshes last_seen)
             assert by_name["devkit_delete_title"].annotations.destructive_hint is True
-            assert by_name["devkit_status"].annotations.read_only_hint is True
+            assert by_name["devkit_status"].annotations.read_only_hint is False
 
     run_async(scenario())
 
@@ -333,7 +334,14 @@ def test_capabilities_host_only(server: MCPServer[None]) -> None:
 def test_configure_and_launch_title(
     server: MCPServer[None], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    ssh = make_paramiko_patch(monkeypatch, commands=[(r"run-game", b"success\n", b"", 0)])
+    ssh = make_paramiko_patch(
+        monkeypatch,
+        commands=[
+            (r"run-game", b"success\n", b"", 0),
+            # absent sidecars, answered the way GNU cat answers (L3)
+            (r"^cat ", b"", b"cat: /home/deck/x: No such file or directory", 1),
+        ],
+    )
 
     async def scenario() -> None:
         async with Client(server, mode="legacy") as client:

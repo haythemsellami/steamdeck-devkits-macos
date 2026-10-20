@@ -286,11 +286,20 @@ def create_server(state_dir: Path | None = None) -> MCPServer[None]:
     read_only = ToolAnnotations(read_only_hint=True)
     mutating = ToolAnnotations(read_only_hint=False)
 
+    # Annotation honesty (M4): read_only is only for tools that never mutate
+    # the device or local state. Anything reaching ``ensure_utils`` (status,
+    # list/inspect titles, capabilities with a device) uploads devkit-utils at
+    # least once per process; ``devkit_doctor``/``devkit_capabilities`` create
+    # the state-dir layout plus a probe file. Those are annotated mutating.
+    # ``devkit_preview_deploy`` stays read-only: it is an rsync ``-n`` dry run
+    # and never calls ensure_utils (see transfer.preview_deploy).
+
     # -- discovery, registry, pairing, status ------------------------------------
 
-    @server.tool(annotations=read_only)
+    @server.tool(annotations=mutating)
     async def devkit_doctor() -> DoctorReport:
-        """Probe host dependencies: rsync/ssh/terminal/state dir (read-only)."""
+        """Probe host dependencies: rsync/ssh/terminal/state dir. Creates the
+        state-dir layout and a writability probe file (local mutation)."""
         return await _run(server_state.core().doctor)
 
     @server.tool(annotations=read_only)
@@ -340,28 +349,34 @@ def create_server(state_dir: Path | None = None) -> MCPServer[None]:
         A declined/timed-out request is a normal failure Result, not an error."""
         return await _run(pairing.pair, server_state.core(), device, timeout_s)
 
-    @server.tool(annotations=read_only)
+    @server.tool(annotations=mutating)
     async def devkit_status(device: str) -> DeviceStatus:
-        """Read device status via steamos-get-status (uploads devkit-utils first)."""
+        """Read device status via steamos-get-status. Mutates the device on
+        first contact per process (devkit-utils upload) and refreshes the
+        registry entry's last_seen/family."""
         return await _run(status.get_status, server_state.core(), device)
 
-    @server.tool(annotations=read_only)
+    @server.tool(annotations=mutating)
     async def devkit_capabilities(device: str | None = None) -> Capabilities:
         """Honest capability report (probes, never hardcoded). With ``device``
-        omitted, host capabilities only. Tools never refuse on capability
-        grounds — this report is how a caller learns support status."""
+        omitted, host capabilities only. Probes mutate local state (state-dir
+        probe file) and, with a device, may upload devkit-utils once per
+        process. Tools never refuse on capability grounds — this report is how
+        a caller learns support status."""
         return await _run(capabilities.capabilities, server_state.core(), device)
 
     # -- titles and deploy --------------------------------------------------------
 
-    @server.tool(annotations=read_only)
+    @server.tool(annotations=mutating)
     async def devkit_list_titles(device: str) -> list[Title]:
-        """List devkit titles deployed on the device (steamos-list-games)."""
+        """List devkit titles deployed on the device (steamos-list-games).
+        May upload devkit-utils on first contact per process."""
         return await _run(titles.list_titles, server_state.core(), device)
 
-    @server.tool(annotations=read_only)
+    @server.tool(annotations=mutating)
     async def devkit_inspect_title(device: str, gameid: GameId) -> TitleDetail:
-        """A title plus its on-device argv/env/settings launch configuration."""
+        """A title plus its on-device argv/env/settings launch configuration.
+        May upload devkit-utils on first contact per process."""
         return await _run(titles.inspect_title, server_state.core(), device, gameid)
 
     @server.tool(annotations=mutating)
