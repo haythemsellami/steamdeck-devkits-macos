@@ -550,3 +550,13 @@ Emulator, SteamOS fork, game manager, reverse engineering, automatic optimizatio
 - §8 diagnostics: `fetch_logs` registers one artifact per requested kind (keeps `artifacts list --kind` meaningful); Deck screenshot picks the lexicographic max of candidates (gamescope timestamped names sort chronologically — matters for mode 2's per-layer files); controller-config polls for `config_*.vdf` (≤ 10 s) before pulling.
 - Known limitation: `JobHandle.wait()` rebuilds DevkitError from the journal and drops `remote_exit_code` (message survives).
 - `cli/` duplication candidates noted for later promotion into `cli/common.py`: the wait-or-print-job-id helper and gameid positional shuffle.
+
+### External-review fixes (2026-10-20)
+
+Reviewed codebase at 902e3d6; verified each finding against the tree before fixing.
+
+- §8 configure_title: sidecar writes now mirror the device helpers exactly — argv written only when entrypoint/args are supplied (entrypoint=None preserves the device's argv[0]; supplied args replace the tail), env written only when non-empty, settings merged over the device's current settings. The merge lives in the core, so CLI and MCP behave identically (previously MCP could clobber a device config set elsewhere).
+- §6: DeviceHandle exec/read failures map to DEVICE_UNREACHABLE, channel timeouts to TIMEOUT, SFTP file-level errors to REMOTE_COMMAND_FAILED; connect-error mapping is now test-covered.
+- §10: `devkit shell` and `devkit migrate` are now implemented (they were listed here and in the capabilities matrix without frontends).
+- §7.1/7.2: a torn final journal line (no trailing newline) is ignored as a crash artifact; recovery sweeps only journals whose recorded pid is dead (pid reuse is a documented limitation); never-started journals are still interrupted; listings skip corrupt journals with a warning.
+- §3: artifact meta.json writes are atomic (tmp + os.replace); unparseable metas are skipped in listings; legacy key import creates keys O_EXCL at mode 0400.
