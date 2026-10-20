@@ -154,7 +154,8 @@ def test_main_drops_stale_callback_state(
 ) -> None:
     # A leftover stash from a previous in-process invocation must not leak:
     # this app() fails before any callback ran, so the fallback rule applies.
-    monkeypatch.setattr(cli, "_resolved_options", Options(json=False, state_dir=None, verbose=False))
+    stale = Options(json=False, state_dir=None, verbose=False)
+    monkeypatch.setattr(cli, "_resolved_options", stale)
     monkeypatch.setattr(sys, "argv", ["devkit", "status"])
     monkeypatch.setattr(common, "stdout_is_tty", lambda: False)
     mocker.patch.object(cli, "app", side_effect=_raising_app())
