@@ -13,6 +13,7 @@ import os
 import signal
 import subprocess
 import threading
+import time
 from collections.abc import Callable, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -37,11 +38,14 @@ class JobContext:
         store: JobStore,
         cancel_event: threading.Event,
         timed_out: Callable[[], bool],
+        deadline: float | None = None,
     ) -> None:
         self.job_id = job_id
         self._store = store
         self._cancel = cancel_event
         self._timed_out = timed_out
+        # time.monotonic() deadline backing the job timeout; None when unbounded
+        self._deadline = deadline
 
     # -- cancellation ------------------------------------------------------------
 
@@ -54,10 +58,33 @@ class JobContext:
     def cancel_requested(self) -> bool:
         return self._cancel.is_set()
 
+    # -- deadline --------------------------------------------------------------------
+
+    def time_remaining(self) -> float | None:
+        """Seconds until the job timeout deadline; None when unbounded."""
+        if self._deadline is None:
+            return None
+        return max(0.0, self._deadline - time.monotonic())
+
+    @property
+    def deadline_exceeded(self) -> bool:
+        """True once the job timeout deadline has passed (unbounded: False)."""
+        return self._deadline is not None and time.monotonic() >= self._deadline
+
     def sleep(self, seconds: float) -> None:
-        """Cancel-aware sleep: returns early (then raises) if cancelled."""
-        self._cancel.wait(seconds)
+        """Cancel-aware sleep, capped at the job timeout deadline when set.
+
+        Sleeping past the deadline raises TIMEOUT — the timeout timer normally
+        beats this via the cancel event, but the cap keeps the deadline
+        authoritative for blocking waits even if the timer thread is starved.
+        """
+        wait_s = seconds
+        if self._deadline is not None:
+            wait_s = min(seconds, max(0.0, self._deadline - time.monotonic()))
+        self._cancel.wait(wait_s)
         self.check_cancelled()
+        if wait_s < seconds and self.deadline_exceeded:
+            raise DevkitError(ErrorCode.TIMEOUT, f"job {self.job_id} exceeded its timeout")
 
     # -- progress -------------------------------------------------------------------
 
@@ -90,11 +117,15 @@ class JobContext:
         env: dict[str, str] | None = None,
         cwd: Path | None = None,
         on_output: Callable[[str], None] | None = None,
+        timeout_s: float | None = None,
     ) -> int:
         """Run a child in its own process group; kill the group on cancel.
 
         Returns the exit code; the caller maps nonzero codes. Output is pumped
         in both \\r- and \\n-separated records (rsync progress2) to on_output.
+        ``timeout_s`` bounds the child independently of the job timeout: on
+        expiry an internal event takes the same kill path as a cancel and the
+        call raises TIMEOUT.
         """
         args = [os.fspath(a) for a in argv]
         proc = subprocess.Popen(  # noqa: S603 - argv is built by callers, never a shell
@@ -105,8 +136,14 @@ class JobContext:
             cwd=cwd,
             start_new_session=True,
         )
+        child_timed_out = threading.Event()
+        timer: threading.Timer | None = None
+        if timeout_s is not None and timeout_s > 0:
+            timer = threading.Timer(timeout_s, child_timed_out.set)
+            timer.daemon = True
+            timer.start()
         try:
-            return self._pump(proc, on_output)
+            return self._pump(proc, on_output, child_timed_out)
         except BaseException:
             self._kill_group(proc, signal.SIGTERM)
             if not self._wait_deadline(proc, _TERM_GRACE_S):
@@ -114,10 +151,17 @@ class JobContext:
                 proc.wait()
             raise
         finally:
+            if timer is not None:
+                timer.cancel()
             if proc.stdout is not None:
                 proc.stdout.close()
 
-    def _pump(self, proc: subprocess.Popen[bytes], on_output: Callable[[str], None] | None) -> int:
+    def _pump(
+        self,
+        proc: subprocess.Popen[bytes],
+        on_output: Callable[[str], None] | None,
+        child_timed_out: threading.Event | None = None,
+    ) -> int:
         assert proc.stdout is not None
         os.set_blocking(proc.stdout.fileno(), False)
         buffer = b""
@@ -138,6 +182,10 @@ class JobContext:
 
         while True:
             self.check_cancelled()
+            if child_timed_out is not None and child_timed_out.is_set():
+                raise DevkitError(
+                    ErrorCode.TIMEOUT, f"job {self.job_id}: process exceeded its timeout"
+                )
             chunk = proc.stdout.read(4096)  # None: no data right now; b"": EOF
             if chunk:
                 drain(chunk)
@@ -255,12 +303,14 @@ class JobRunner:
             cancel_event.set()
 
         timer: threading.Timer | None = None
+        deadline: float | None = None
         if timeout_s is not None and timeout_s > 0:
+            deadline = time.monotonic() + timeout_s
             timer = threading.Timer(timeout_s, _on_timeout)
             timer.daemon = True
             timer.start()
 
-        ctx = JobContext(job_id, self._store, cancel_event, timed_out.is_set)
+        ctx = JobContext(job_id, self._store, cancel_event, timed_out.is_set, deadline)
         self._store.start(job_id, os.getpid())
         try:
             message = fn(ctx)

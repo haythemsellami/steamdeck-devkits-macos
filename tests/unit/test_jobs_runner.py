@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -170,3 +171,94 @@ def test_run_process_flushes_unterminated_tail(runner: JobRunner) -> None:
     handle = runner.submit(fn, kind=JobKind.DEPLOY)
     handle.wait()
     assert lines == ["partial"]
+
+
+# -- M7: deadline introspection, sleep cap, per-process timeout ------------------
+
+
+def test_run_process_timeout_kills_child_and_journals_timeout(runner: JobRunner) -> None:
+    started = time.monotonic()
+
+    def fn(ctx: JobContext) -> None:
+        ctx.run_process(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            timeout_s=1,
+        )
+
+    handle = runner.submit(fn, kind=JobKind.DEPLOY)
+    with pytest.raises(DevkitError) as exc_info:
+        handle.wait()
+    assert exc_info.value.code == ErrorCode.TIMEOUT
+    info = handle.info()
+    assert info.state == JobState.TIMEOUT
+    assert info.code == ErrorCode.TIMEOUT
+    # killed promptly, not after the SIGTERM grace period let alone the 60 s sleep
+    assert time.monotonic() - started < 30
+
+
+def test_run_process_timeout_does_not_fire_when_child_is_fast(runner: JobRunner) -> None:
+    lines: list[str] = []
+
+    def fn(ctx: JobContext) -> None:
+        code = ctx.run_process(
+            [sys.executable, "-c", "print('quick')"],
+            on_output=lines.append,
+            timeout_s=10,
+        )
+        assert code == 0
+
+    handle = runner.submit(fn, kind=JobKind.DEPLOY)
+    handle.wait()
+    assert lines == ["quick"]
+
+
+def test_time_remaining_counts_down(runner: JobRunner) -> None:
+    samples: list[float | None] = []
+
+    def fn(ctx: JobContext) -> None:
+        samples.append(ctx.time_remaining())
+        ctx.sleep(0.2)
+        samples.append(ctx.time_remaining())
+
+    handle = runner.submit(fn, kind=JobKind.DEPLOY, timeout_s=30)
+    handle.wait()
+    first, second = samples
+    assert first is not None and second is not None
+    assert 0 < second < first <= 30
+
+
+def test_time_remaining_none_without_timeout(runner: JobRunner) -> None:
+    observations: list[tuple[float | None, bool]] = []
+
+    def fn(ctx: JobContext) -> None:
+        observations.append((ctx.time_remaining(), ctx.deadline_exceeded))
+
+    handle = runner.submit(fn, kind=JobKind.DEPLOY)
+    handle.wait()
+    assert observations == [(None, False)]
+
+
+def _bare_context(tmp_path: Path, deadline: float | None) -> JobContext:
+    return JobContext(
+        "job_01ARZ3NDEKTSV4RRFFQ69G5FAV",
+        JobStore(tmp_path / "jobs"),
+        threading.Event(),
+        lambda: False,
+        deadline=deadline,
+    )
+
+
+def test_deadline_exceeded(tmp_path: Path) -> None:
+    assert _bare_context(tmp_path, None).deadline_exceeded is False
+    assert _bare_context(tmp_path, time.monotonic() + 60).deadline_exceeded is False
+    assert _bare_context(tmp_path, time.monotonic() - 1).deadline_exceeded is True
+
+
+def test_sleep_capped_at_deadline_raises_timeout(tmp_path: Path) -> None:
+    # No runner timer involved: the deadline alone caps the wait and raises.
+    ctx = _bare_context(tmp_path, time.monotonic() + 0.2)
+    started = time.monotonic()
+    with pytest.raises(DevkitError) as exc_info:
+        ctx.sleep(60)
+    assert exc_info.value.code == ErrorCode.TIMEOUT
+    assert time.monotonic() - started < 5
