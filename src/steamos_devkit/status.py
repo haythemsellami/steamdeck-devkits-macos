@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import ValidationError
 
@@ -63,8 +63,10 @@ def get_status(core: DevkitCore, selector: str) -> DeviceStatus:
     """Upload devkit-utils if needed, then read and parse device status.
 
     On success the device's registry entry (when it has one) gets a fresh
-    ``last_seen`` timestamp; transient devices are not registered as a side
-    effect.
+    ``last_seen`` timestamp and a refreshed ``family`` (``"frame"`` when the
+    device reports ``is_deckard``, else ``"deck"``) so a registered device's
+    family does not stay ``"unknown"`` forever (L6); transient devices are
+    not registered as a side effect.
     """
     handle = core.device_handle(selector)
     handle.ensure_utils()
@@ -73,5 +75,7 @@ def get_status(core: DevkitCore, selector: str) -> DeviceStatus:
     entry = core.state.devices.get(handle.device.name)
     if entry is not None:
         entry.last_seen = datetime.now(UTC)
+        family: Literal["deck", "frame"] = "frame" if status.is_deckard else "deck"
+        entry.family = family
         core.state.devices.upsert(entry)
     return status
