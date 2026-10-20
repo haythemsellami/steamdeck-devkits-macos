@@ -33,13 +33,18 @@ This document is the coding-sprint contract: module boundaries, data models, CLI
                 └────────┬─────────┘
         ┌────────────────┼─────────────────┐
 ┌───────▼───────┐ ┌──────▼──────┐ ┌────────▼────────┐
-│ HostAdapter   │ │ Job runner  │ │ Vendored core   │
-│ (mac/linux/   │ │ + journal   │ │ (upstream)      │
-│  windows)     │ │             │ │ + devkit-utils  │
+│ HostAdapter   │ │ Job runner  │ │ DeviceHandle    │
+│ (mac/linux/   │ │ + journal   │ │ (paramiko/      │
+│  windows)     │ │             │ │ rsync/zeroconf) │
 └───────────────┘ └─────────────┘ └────────┬────────┘
-                                           │ paramiko / rsync / zeroconf
+                                           │ speaks the audited protocol
+                                           │ directly; rsyncs the vendored
+                                           │ devkit-utils/ tree verbatim
+                                           │ to ~/devkit-utils on identify
                                     SteamOS device
 ```
+
+`_vendor/devkit_client/` (the upstream client core) is deliberately absent from the runtime path above: production modules implement the protocol directly from the audit, and the vendored core is retained as protocol reference, parity-tested for importability (`tests/unit/test_vendor.py`). The only vendored code that executes is `_vendor/devkit-utils/` — on the device (D1 addendum, 2026-10-20).
 
 Rules (from overview §"one shared implementation"):
 
@@ -560,3 +565,4 @@ Reviewed codebase at 902e3d6; verified each finding against the tree before fixi
 - §10: `devkit shell` and `devkit migrate` are now implemented (they were listed here and in the capabilities matrix without frontends).
 - §7.1/7.2: a torn final journal line (no trailing newline) is ignored as a crash artifact; recovery sweeps only journals whose recorded pid is dead (pid reuse is a documented limitation); never-started journals are still interrupted; listings skip corrupt journals with a warning.
 - §3: artifact meta.json writes are atomic (tmp + os.replace); unparseable metas are skipped in listings; legacy key import creates keys O_EXCL at mode 0400.
+- §10/cli: per-module helper duplicates promoted into `cli/common.py` (L1) — `shift_optional_selector` (the `<sel> <value>` positional shuffle), `run_job` (submit / `--no-wait` / wait), `artifact_paths_human`, `tail_text_bounded` (the `read_artifact_excerpt` bounds applied to files inside directory artifacts, which the artifact-store function itself rejects), `emit_result`; `resolve_selector` is the single selector helper. `deploy --no-wait` JSON now reports `"status": "queued"` like the other job commands and the MCP surface.
