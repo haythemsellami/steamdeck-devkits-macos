@@ -21,6 +21,11 @@ from steamos_devkit.errors import DevkitError
 
 logger = logging.getLogger(__name__)
 
+# The callback's parsed Options, stashed so main()'s exception path can render
+# the failure with the same JSON-mode decision the callback made (L11). Reset
+# at every main() entry; None means the callback never ran.
+_resolved_options: Options | None = None
+
 app = typer.Typer(
     name=constants.CLI_COMMAND,
     help=f"{constants.APP_DISPLAY_NAME} for macOS — CLI over the shared DevkitCore.",
@@ -49,6 +54,8 @@ def _callback(
         force=True,
     )
     ctx.obj = Options(json=json_mode, state_dir=state_dir, verbose=verbose)
+    global _resolved_options
+    _resolved_options = ctx.obj
 
 
 # --- command registration: one import + register per module, append-only ---
@@ -76,12 +83,47 @@ diagnostics.register(app)
 mcp.register(app)
 # --- end command registration ---
 
+_JSON_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_JSON_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+
+
+def _argv_json_mode(argv: list[str]) -> bool:
+    """Best-effort ``--json`` scan for errors raised before the callback ran.
+
+    Mirrors the callback's flag with the value forms typer accepts for bool
+    flags across versions: bare ``--json``, ``--json=true``/``--json=false``,
+    and the space-separated ``--json false``.
+    """
+    requested = False
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--json":
+            following = argv[i + 1].lower() if i + 1 < len(argv) else ""
+            if following in _JSON_TRUE_VALUES or following in _JSON_FALSE_VALUES:
+                requested = following in _JSON_TRUE_VALUES
+                i += 1  # consume the value token too
+            else:
+                requested = True
+        elif arg.startswith("--json="):
+            requested = arg.partition("=")[2].lower() in _JSON_TRUE_VALUES
+        i += 1
+    return requested
+
 
 def main() -> None:
+    global _resolved_options
+    _resolved_options = None  # fresh invocation; drop any stale callback state
     try:
         app()
     except DevkitError as err:
-        json_mode = "--json" in sys.argv[1:] or not common.stdout_is_tty()
+        # When the callback ran, its parsed Options are authoritative; the argv
+        # scan is only a fallback for failures before the callback executed.
+        json_mode = (
+            _resolved_options.json
+            if _resolved_options is not None
+            else _argv_json_mode(sys.argv[1:]) or not common.stdout_is_tty()
+        )
         if json_mode:
             from steamos_devkit.models import Result
 
