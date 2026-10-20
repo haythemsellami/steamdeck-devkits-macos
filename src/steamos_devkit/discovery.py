@@ -20,6 +20,7 @@ import logging
 import queue
 import socket
 import string
+import sys
 import time
 import unicodedata
 from datetime import UTC, datetime
@@ -218,6 +219,9 @@ def _permission_error(core: DevkitCore, cause: Exception) -> DevkitError:
 
 
 _PERMISSION_ERRNOS = frozenset({errnomod.EPERM, errnomod.EACCES})
+# On macOS, Local Network (TCC) denial also manifests as EHOSTUNREACH (errno 65)
+# on multicast sendto — observed on macOS 26 with unsigned/CLI processes.
+_PERMISSION_ERRNOS_DARWIN = _PERMISSION_ERRNOS | {errnomod.EHOSTUNREACH}
 
 
 def _discovery_error(core: DevkitCore, cause: Exception) -> DevkitError:
@@ -230,7 +234,10 @@ def _discovery_error(core: DevkitCore, cause: Exception) -> DevkitError:
     block; non-OS failures are an internal error.
     """
     if isinstance(cause, OSError):
-        if cause.errno in _PERMISSION_ERRNOS:
+        permission_errno_set = (
+            _PERMISSION_ERRNOS_DARWIN if sys.platform == "darwin" else _PERMISSION_ERRNOS
+        )
+        if cause.errno in permission_errno_set:
             return _permission_error(core, cause)
         return DevkitError(
             ErrorCode.DEVICE_UNREACHABLE,

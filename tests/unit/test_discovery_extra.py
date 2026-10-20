@@ -9,6 +9,7 @@ and non-OS failures are INTERNAL.
 from __future__ import annotations
 
 import errno
+import sys
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -56,7 +57,7 @@ def test_permission_shaped_errors_map_to_permission_local_network(
 
 @pytest.mark.parametrize(
     "err",
-    [errno.EHOSTUNREACH, errno.ENETUNREACH, errno.EADDRNOTAVAIL],
+    [errno.ENETUNREACH, errno.EADDRNOTAVAIL],
 )
 def test_network_failures_map_to_device_unreachable(core: DevkitCore, err: int) -> None:
     _FailingZeroconf.construct_error = OSError(err, "no route")
@@ -65,6 +66,15 @@ def test_network_failures_map_to_device_unreachable(core: DevkitCore, err: int) 
     assert exc_info.value.code == ErrorCode.DEVICE_UNREACHABLE
     # no TCC claim without a permission errno
     assert "Local Network" not in exc_info.value.message
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="errno 65 is TCC-shaped only on darwin")
+def test_ehostunreach_on_darwin_maps_permission(core: DevkitCore) -> None:
+    # macOS blocks Local Network sends as EHOSTUNREACH for unsigned processes
+    _FailingZeroconf.construct_error = OSError(errno.EHOSTUNREACH, "no route")
+    with pytest.raises(DevkitError) as exc_info:
+        discovery.discover(core, timeout_s=0.01)
+    assert exc_info.value.code == ErrorCode.PERMISSION_LOCAL_NETWORK
 
 
 def test_os_error_without_errno_is_unreachable_not_permission(core: DevkitCore) -> None:

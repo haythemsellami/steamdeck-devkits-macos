@@ -25,7 +25,7 @@ import paramiko
 
 from steamos_devkit import constants
 from steamos_devkit.discovery import sshd_flag
-from steamos_devkit.errors import DevkitError, ErrorCode
+from steamos_devkit.errors import DevkitError, ErrorCode, map_network_oserror
 from steamos_devkit.models import Device, Result
 
 if TYPE_CHECKING:
@@ -92,6 +92,13 @@ def _is_timeout(exc: OSError) -> bool:
     return isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError)
 
 
+def _failure_from_oserror(exc: OSError, device: Device) -> Result:
+    """Failure Result for the register POST, with honest network mapping."""
+    mapped = map_network_oserror(exc, target=f"{device.address}:{device.port}")
+    code = mapped.code or ErrorCode.DEVICE_UNREACHABLE
+    return Result.failure(code, mapped.message, device=device)
+
+
 def _request(url: str) -> urllib.request.Request:
     return urllib.request.Request(url)
 
@@ -145,11 +152,8 @@ def fetch_properties(address: str, port: int, timeout: float) -> dict[str, Any]:
                 ErrorCode.TIMEOUT,
                 f"timed out querying device login at {address}:{port}",
             ) from e
-        raise DevkitError(
-            ErrorCode.DEVICE_UNREACHABLE,
-            f"device HTTP service at {address}:{port} is not responding "
-            "(is the devkit service running?); pairing needs port 32000",
-            details={"address": address, "port": port},
+        raise map_network_oserror(
+            e, target=f"{address}:{port} (devkit HTTP service; pairing needs port 32000)"
         ) from e
     login = payload.decode("utf-8", errors="replace").strip()
     if not login:
@@ -233,11 +237,7 @@ def pair(core: DevkitCore, selector: str, timeout_s: int = constants.TIMEOUT_PAI
                 "approve the request on the device and retry",
                 device=device,
             )
-        return Result.failure(
-            ErrorCode.DEVICE_UNREACHABLE,
-            f"device HTTP service at {device.address}:{device.port} is not responding ({e})",
-            device=device,
-        )
+        return _failure_from_oserror(e, device)
 
     now = datetime.now(UTC)
     paired = Device(

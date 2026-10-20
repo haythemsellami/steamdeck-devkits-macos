@@ -53,3 +53,40 @@ class DevkitError(Exception):
 
     def __str__(self) -> str:
         return f"[{self.code}] {self.message}"
+
+
+# --- network error classification -----------------------------------------------
+
+_EHOSTUNREACH = 65  # errno.EHOSTUNREACH
+"""macOS TCC signature: Local Network denial surfaces as EHOSTUNREACH on LAN
+connects (verified on macOS 26: unicast TCP to a device on the same subnet
+fails with errno 65 for unsigned processes while Apple system tools pass)."""
+
+
+def map_network_oserror(err: OSError, *, target: str) -> DevkitError:
+    """Map a network OSError to an honest DevkitError.
+
+    On darwin, EHOSTUNREACH may be a genuine unreachable host OR a blocked
+    Local Network permission for the responsible app — the two are
+    indistinguishable from errno alone, so the message presents both. Other
+    errors (and all non-darwin platforms) map to DEVICE_UNREACHABLE.
+    """
+    import sys
+
+    # urllib.error.URLError wraps the real OSError as .reason; unwrap it.
+    cause = getattr(err, "reason", None)
+    effective = cause if isinstance(cause, OSError) else err
+    if sys.platform == "darwin" and effective.errno == _EHOSTUNREACH:
+        return DevkitError(
+            ErrorCode.PERMISSION_LOCAL_NETWORK,
+            f"cannot reach {target} (no route to host). The device may be offline or on "
+            "another network — or macOS is blocking Local Network access for this app. "
+            "Check System Settings > Privacy & Security > Local Network and enable your "
+            "terminal/host app, then retry.",
+            details={"target": target, "errno": str(effective.errno)},
+        )
+    return DevkitError(
+        ErrorCode.DEVICE_UNREACHABLE,
+        f"cannot reach {target} ({err})",
+        details={"target": target, "errno": str(effective.errno) if effective.errno else ""},
+    )

@@ -25,7 +25,7 @@ import paramiko
 
 from steamos_devkit import constants
 from steamos_devkit._vendor import utils_dir
-from steamos_devkit.errors import DevkitError, ErrorCode
+from steamos_devkit.errors import DevkitError, ErrorCode, map_network_oserror
 from steamos_devkit.models import Device
 
 if TYPE_CHECKING:
@@ -175,12 +175,21 @@ class DeviceHandle:
                 ErrorCode.PAIRING_FAILED,
                 f"key rejected by {self.device.address}; re-run `devkit pair`",
             ) from e
-        except (OSError, paramiko.SSHException) as e:
-            # covers socket.timeout, gaierror, NoValidConnectionsError, banner errors
+        except paramiko.SSHException as e:
+            # NoValidConnectionsError, banner errors, dead channels
             raise DevkitError(
                 ErrorCode.DEVICE_UNREACHABLE,
                 f"cannot reach {self.device.address}:22 ({e})",
             ) from e
+        except TimeoutError as e:
+            raise DevkitError(
+                ErrorCode.DEVICE_UNREACHABLE,
+                f"no answer from {self.device.address}:22 within {_CONNECT_TIMEOUT_S:g}s",
+            ) from e
+        except OSError as e:
+            # gaierror, refused, no-route — errno 65 on darwin is the TCC
+            # Local Network denial signature (errors.map_network_oserror)
+            raise map_network_oserror(e, target=f"{self.device.address}:22") from e
         try:
             yield client
         finally:
