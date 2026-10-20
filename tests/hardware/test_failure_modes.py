@@ -55,7 +55,15 @@ def test_failed_launch_is_honest(
             source_dir=source,
             config=config,
         )
-        info = titles_mod.deploy(core, device_selector, spec).wait()
+        try:
+            info = titles_mod.deploy(core, device_selector, spec).wait()
+        except DevkitError as err:
+            # the device validates the entrypoint at registration time and
+            # refuses — that IS the honest failure, arriving early
+            assert err.code == ErrorCode.REMOTE_COMMAND_FAILED
+            assert "doesn't exist" in err.message or "registration" in err.message.lower()
+            hwrecord("failed_launch", "pass", outcome="registration-refused")
+            return
         assert info.state == JobState.SUCCEEDED
 
         started = time.monotonic()

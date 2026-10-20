@@ -324,7 +324,7 @@ class DeviceHandle:
         key_path = self._core.state.key_path
         rsh = (
             f"{ssh} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
-            f"-i {shlex.quote(str(key_path))}"
+            f"-o ConnectTimeout=10 -i {shlex.quote(str(key_path))}"
         )
         argv = [
             str(rsync.path),
@@ -337,10 +337,30 @@ class DeviceHandle:
         ]
         result = self._run_local(argv)
         if result.returncode != 0:
+            stderr_tail = result.stderr[-500:]
+            # connection-shaped rsync/ssh failures mean the device is gone, not
+            # that the transfer is broken — report reachability honestly
+            lowered = result.stderr.lower()
+            if any(
+                marker in lowered
+                for marker in (
+                    "connection timed out",
+                    "operation timed out",
+                    "no route to host",
+                    "connection refused",
+                    "could not resolve hostname",
+                )
+            ):
+                raise DevkitError(
+                    ErrorCode.DEVICE_UNREACHABLE,
+                    f"cannot reach {self.device.address} for the devkit-utils upload",
+                    details={"stderr_tail": stderr_tail},
+                    remote_exit_code=result.returncode,
+                )
             raise DevkitError(
                 ErrorCode.REMOTE_COMMAND_FAILED,
                 f"devkit-utils upload failed ({result.returncode})",
-                details={"stderr_tail": result.stderr[-500:]},
+                details={"stderr_tail": stderr_tail},
                 remote_exit_code=result.returncode,
             )
         with self._utils_sync_lock:

@@ -279,3 +279,33 @@ def test_ensure_utils_failure_maps_remote_failed(
         handle.ensure_utils()
     assert exc_info.value.code == ErrorCode.REMOTE_COMMAND_FAILED
     assert exc_info.value.remote_exit_code == 23
+
+
+def test_ensure_utils_connection_failure_maps_unreachable(
+    core: DevkitCore, paired_key: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _registry_device(core)
+    monkeypatch.setenv(
+        constants.RSYNC_ENV_VAR,
+        str(
+            _fake_rsync_script(core.state.root / "bin", "rsync  version 3.5.1  protocol version 33")
+        ),
+    )
+    handle = core.device_handle("deck")
+    captured: list[list[str]] = []
+
+    def dead_host(argv: list[str]) -> subprocess.CompletedProcess[str]:
+        captured.append(list(argv))
+        return subprocess.CompletedProcess(
+            argv,
+            255,
+            "",
+            "ssh: connect to host 192.0.2.10 port 22: Connection timed out",
+        )
+
+    monkeypatch.setattr(handle, "_run_local", dead_host)
+    with pytest.raises(DevkitError) as exc_info:
+        handle.ensure_utils(force=True)
+    assert exc_info.value.code == ErrorCode.DEVICE_UNREACHABLE
+    # bounded wait: ConnectTimeout is part of the rsh options
+    assert "ConnectTimeout=10" in captured[0][captured[0].index("-e") + 1]

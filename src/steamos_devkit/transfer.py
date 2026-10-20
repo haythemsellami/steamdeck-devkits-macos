@@ -72,7 +72,8 @@ def build_rsync_argv(
         raise DevkitError(ErrorCode.VALIDATION, "at least one source path is required")
     rsh = (
         f"{shlex.quote(str(ssh_path))} -o StrictHostKeyChecking=no "
-        f"-o UserKnownHostsFile=/dev/null -i {shlex.quote(str(key_path))}"
+        f"-o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "
+        f"-i {shlex.quote(str(key_path))}"
     )
     argv = [str(rsync_path), "-av"]
     if compress:

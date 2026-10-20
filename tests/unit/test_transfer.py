@@ -47,7 +47,8 @@ class TestBuildRsyncArgv:
         assert "--chmod=Du=rwx,Dgo=rx,Fu=rwx,Fog=rx" in argv
         rsh = argv[argv.index("-e") + 1]
         assert rsh == (
-            f"{SSH} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {KEY}"
+            f"{SSH} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
+            f"-o ConnectTimeout=10 -i {KEY}"
         )
         # folder-to-folder forcing, upstream style
         assert argv[-2] == "/tmp/build/"

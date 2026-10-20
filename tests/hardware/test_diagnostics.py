@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from steamos_devkit.artifacts import get_artifact, read_artifact_excerpt
+from steamos_devkit.artifacts import get_artifact
 from steamos_devkit.core import DevkitCore
 from steamos_devkit.models import JobState
 
@@ -27,8 +27,17 @@ def test_fetch_logs_steam(core: DevkitCore, device_selector: str, hwrecord: HwRe
     assert artifact.kind == "logs"
     assert artifact.path.exists()
     if artifact.bytes > 0:  # a fresh device may genuinely have no steam logs yet
-        excerpt = read_artifact_excerpt(core.state, artifact.id)
-        assert excerpt.strip(), "device has logs but the excerpt is empty"
+        # logs artifacts are directories; tail the primary log inside the payload
+        candidates = [
+            artifact.path / "console-linux.txt",
+            artifact.path / "steam_output.log",
+        ]
+        primary = next((p for p in candidates if p.exists()), None)
+        if primary is None:
+            primary = next((p for p in sorted(artifact.path.rglob("*")) if p.is_file()), None)
+        assert primary is not None, f"logs artifact {artifact.path} contains no files"
+        text = primary.read_text(encoding="utf-8", errors="replace")
+        assert text.strip(), "device has logs but the primary log is empty"
     hwrecord("fetch_logs", "pass", bytes=artifact.bytes, artifact=artifact.id)
 
 

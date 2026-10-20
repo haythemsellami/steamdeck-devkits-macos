@@ -12,6 +12,7 @@ absolute ``/home/<login>/devkit-game/...`` form like upstream ``:1357``.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shlex
 import tempfile
@@ -40,6 +41,8 @@ from steamos_devkit.transfer import upload_tree, validate_deploy_spec
 if TYPE_CHECKING:
     from steamos_devkit.core import DevkitCore
     from steamos_devkit.jobs import JobContext, JobHandle
+
+logger = logging.getLogger(__name__)
 
 _UTILS_DIR = "~/devkit-utils"
 """Remote home of the uploaded device-side helpers (audit section 4)."""
@@ -199,6 +202,16 @@ def _write_config_sidecars(handle: DeviceHandle, gameid: str, config: TitleConfi
             merged["compat_tool"] = config.runtime
         payloads[settings_suffix] = merged
 
+    mkdir_note = ""
+    if payloads:
+        # on a fresh device ~/devkit-game may not exist yet — it is created by
+        # steamos-prepare-upload during deploy, which configure can precede.
+        # Best-effort: a failing mkdir surfaces via the put's error below.
+        home = f"/home/{handle.device.login}"
+        mkdir = handle.run(f"mkdir -p {home}/devkit-game", check=False)
+        if mkdir.exit_code != 0:
+            mkdir_note = f" (mkdir also failed: {mkdir.stderr.strip()})"
+            logger.warning("mkdir of %s/devkit-game failed: %s", home, mkdir.stderr.strip())
     with tempfile.TemporaryDirectory(prefix="devkit-title-") as tmp:
         for suffix, payload in payloads.items():
             local = Path(tmp) / f"{gameid}{suffix}"
@@ -208,7 +221,7 @@ def _write_config_sidecars(handle: DeviceHandle, gameid: str, config: TitleConfi
             except (OSError, paramiko.SSHException) as e:
                 raise DevkitError(
                     ErrorCode.REMOTE_COMMAND_FAILED,
-                    f"sidecar upload failed for {gameid}{suffix}: {e}",
+                    f"sidecar upload failed for {gameid}{suffix}: {e}{mkdir_note}",
                 ) from e
 
 

@@ -249,6 +249,20 @@ class TestConfigureTitle:
         argv = json.loads(ssh.filesystem[f"/home/deck/devkit-game/{GAMEID}-argv.json"])
         assert argv == ["bin/new.sh"]
 
+    def test_configure_creates_remote_title_root_first(
+        self, core: DevkitCore, ssh: FakeSSHClient
+    ) -> None:
+        # on a fresh device ~/devkit-game does not exist until prepare-upload;
+        # sidecar writes must mkdir it first (hardware-run finding)
+        result = configure_title(core, "deck", GAMEID, TitleConfig(env={"A": "B"}))
+        assert result.ok
+        assert "mkdir -p /home/deck/devkit-game" in ssh.commands_run
+
+    def test_empty_configure_skips_mkdir(self, core: DevkitCore, ssh: FakeSSHClient) -> None:
+        result = configure_title(core, "deck", GAMEID, TitleConfig())
+        assert result.ok
+        assert not any("mkdir" in c for c in ssh.commands_run)
+
 
 class TestRegisterTitle:
     def _register_command(self, ssh: FakeSSHClient) -> str:
