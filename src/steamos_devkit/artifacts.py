@@ -9,6 +9,8 @@ any failure removes the partial artifact directory.
 from __future__ import annotations
 
 import hashlib
+import logging
+import os
 import re
 import shutil
 from datetime import UTC, datetime
@@ -19,6 +21,8 @@ import ulid
 from steamos_devkit.config import StateStore
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import Artifact
+
+logger = logging.getLogger(__name__)
 
 EXCERPT_MAX_BYTES = 65_536  # 64 KiB (spec section 11)
 EXCERPT_MAX_LINES = 2_000
@@ -90,7 +94,11 @@ def register_artifact(
                 "created_at": datetime.now(UTC),
             }
         )
-        (dest_dir / "meta.json").write_text(artifact.model_dump_json(indent=2), encoding="utf-8")
+        meta_path = dest_dir / "meta.json"
+        # atomic write: a crash mid-write must not leave a truncated meta
+        tmp_meta = dest_dir / ".meta.json.tmp"
+        tmp_meta.write_text(artifact.model_dump_json(indent=2), encoding="utf-8")
+        os.replace(tmp_meta, meta_path)
     except Exception:
         shutil.rmtree(dest_dir, ignore_errors=True)
         raise
@@ -100,15 +108,19 @@ def register_artifact(
 def list_artifacts(
     state: StateStore, *, device: str | None = None, kind: str | None = None
 ) -> list[Artifact]:
-    """All registered artifacts, oldest first, optionally filtered."""
+    """All registered artifacts, oldest first, optionally filtered.
+
+    Unparseable meta files are skipped with a warning (direct ``get_artifact``
+    on a known id still surfaces errors): one damaged artifact must not
+    disable the whole store.
+    """
     artifacts: list[Artifact] = []
     for meta in sorted(state.artifacts_dir.glob("*/art_*/meta.json")):
         try:
             artifact = Artifact.model_validate_json(meta.read_text(encoding="utf-8"))
         except Exception as e:
-            raise DevkitError(
-                ErrorCode.STATE_CORRUPT, f"malformed artifact meta {meta}: {e}"
-            ) from e
+            logger.warning("skipping unparseable artifact meta %s: %s", meta, e)
+            continue
         if device is not None and artifact.device != device:
             continue
         if kind is not None and artifact.kind != kind:

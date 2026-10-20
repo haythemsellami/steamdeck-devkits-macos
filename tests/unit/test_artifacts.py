@@ -126,3 +126,21 @@ def test_excerpt_rejects_directory(state: StateStore) -> None:
     with pytest.raises(DevkitError) as exc_info:
         read_artifact_excerpt(state, artifact.id)
     assert exc_info.value.code == ErrorCode.VALIDATION
+
+
+def test_list_skips_unparseable_meta(state: StateStore) -> None:
+    good = _register_file(state)
+    bad_dir = state.artifacts_dir / "deck" / "art_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+    bad_dir.mkdir(parents=True)
+    (bad_dir / "meta.json").write_text("{truncated", encoding="utf-8")  # torn meta
+    assert [a.id for a in list_artifacts(state)] == [good.id]
+    # the damaged id is invisible, not fatal
+    with pytest.raises(DevkitError) as exc_info:
+        get_artifact(state, "art_01ARZ3NDEKTSV4RRFFQ69G5FAV")
+    assert exc_info.value.code == ErrorCode.ARTIFACT_NOT_FOUND
+
+
+def test_meta_write_leaves_no_tmp_files(state: StateStore) -> None:
+    artifact = _register_file(state)
+    assert list(artifact.path.parent.glob("*.tmp")) == []
+    assert (artifact.path.parent / "meta.json").exists()
