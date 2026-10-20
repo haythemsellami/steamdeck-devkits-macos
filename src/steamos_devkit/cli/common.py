@@ -7,6 +7,7 @@ circular imports. Each command module exposes ``register(app: typer.Typer)``;
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from dataclasses import dataclass
@@ -15,8 +16,11 @@ from typing import NoReturn
 
 import typer
 
+from steamos_devkit.artifacts import EXCERPT_MAX_BYTES, EXCERPT_MAX_LINES, get_artifact
 from steamos_devkit.core import DevkitCore
 from steamos_devkit.errors import DevkitError, ErrorCode
+from steamos_devkit.jobs import JobHandle
+from steamos_devkit.models import JobInfo, Result
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +112,81 @@ def resolve_selector(ctx: typer.Context, selector: str | None) -> str:
             "no device given and no last device; pass a device or run `devkit pair`",
         )
     return last
+
+
+def shift_optional_selector(
+    sel: str | None, value: str | None, *, missing: str
+) -> tuple[str | None, str]:
+    """Split ``<sel> <value>`` positionals when the selector is optional.
+
+    Two positionals given: the first is the device, the second the value. One
+    positional given: it is the value, and the device is left to
+    :func:`resolve_selector`'s last-device fallback. Neither: VALIDATION with
+    the caller's ``missing`` message (each command names its own argument).
+    """
+    if value is not None:
+        return sel, value
+    if sel is None:
+        raise DevkitError(ErrorCode.VALIDATION, missing)
+    return None, sel
+
+
+def run_job(ctx: typer.Context, job: JobHandle, *, wait: bool) -> JobInfo | None:
+    """``--no-wait`` prints the job id; otherwise block to a terminal state.
+
+    Returns the terminal JobInfo when waiting (None in no-wait mode) so
+    callers can print human-mode follow-ups (artifact paths, log excerpts).
+    """
+    if not wait:
+        emit(
+            ctx,
+            json.dumps({"job_id": job.job_id, "status": "queued"}),
+            f"job {job.job_id} submitted; `devkit jobs wait {job.job_id}` to follow it",
+        )
+        return None
+    try:
+        info = job.wait()
+    except DevkitError as err:
+        die(err, get_options(ctx).json)
+    human = f"job {info.id} {info.state}"
+    if info.message:
+        human += f": {info.message}"
+    emit(ctx, info.model_dump_json(), human)
+    return info
+
+
+def artifact_paths_human(core: DevkitCore, info: JobInfo) -> list[str]:
+    """Human-mode lines locating each artifact a finished job produced."""
+    lines: list[str] = []
+    for artifact_id in info.artifacts:
+        artifact = get_artifact(core.state, artifact_id)
+        lines.append(f"artifact: {artifact.id} — {artifact.path}")
+    return lines
+
+
+def tail_text_bounded(path: Path, tail_lines: int) -> str:
+    """Bounded tail of one text file, at read_artifact_excerpt's bounds.
+
+    ``artifacts.read_artifact_excerpt`` is the canonical implementation, but
+    it takes a registered file artifact; a "logs" artifact is a directory, so
+    the primary log inside it is tailed by path here under the same bounds
+    (``EXCERPT_MAX_LINES`` / ``EXCERPT_MAX_BYTES``, owned by artifacts.py).
+    """
+    tail_lines = min(tail_lines, EXCERPT_MAX_LINES)
+    size = path.stat().st_size
+    with open(path, "rb") as fh:
+        if size > EXCERPT_MAX_BYTES:
+            fh.seek(-EXCERPT_MAX_BYTES, 2)
+        data = fh.read()
+    lines = data.decode("utf-8", errors="replace").splitlines()
+    if len(lines) > tail_lines:
+        lines = lines[-tail_lines:]
+    return "\n".join(lines)
+
+
+def emit_result(ctx: typer.Context, result: Result) -> None:
+    """Emit a plain Result (JSON, or its message in human mode)."""
+    emit(ctx, result.model_dump_json(), result.message or "")
 
 
 def emit(ctx: typer.Context, payload_json: str, human: str) -> None:

@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
-import json as jsonlib
 from typing import Literal, cast
 
 import typer
 
 from steamos_devkit import constants
 from steamos_devkit import profiling as ops
-from steamos_devkit.cli.common import die, emit, get_options, make_core, resolve_selector
+from steamos_devkit.cli.common import (
+    artifact_paths_human,
+    die,
+    emit_result,
+    get_options,
+    make_core,
+    resolve_selector,
+    run_job,
+    shift_optional_selector,
+)
 from steamos_devkit.errors import DevkitError, ErrorCode
-from steamos_devkit.jobs import JobHandle
-from steamos_devkit.models import Result
 
 renderdoc_app = typer.Typer(
     name="renderdoc",
@@ -22,18 +28,7 @@ renderdoc_app = typer.Typer(
 
 _SEL_HELP = "Device selector (registry name, IP, or hostname; default: last device)."
 
-
-def _shift(sel: str | None, value: str | None, name: str) -> tuple[str | None, str]:
-    """``<sel> <value>`` positionals with an optional selector.
-
-    One positional given is the value (device falls back to the last-device
-    marker); two given means the first is the device.
-    """
-    if value is not None:
-        return sel, value
-    if sel is None:
-        raise DevkitError(ErrorCode.VALIDATION, f"missing {name} argument")
-    return None, sel
+_MISSING_ON_OFF = "missing on|off argument"
 
 
 def _parse_on_off(ctx: typer.Context, value: str) -> bool:
@@ -46,27 +41,6 @@ def _parse_on_off(ctx: typer.Context, value: str) -> bool:
         DevkitError(ErrorCode.VALIDATION, f"expected 'on' or 'off', got {value!r}"),
         get_options(ctx).json,
     )
-
-
-def _emit_result(ctx: typer.Context, result: Result) -> None:
-    emit(ctx, result.model_dump_json(), result.message or "")
-
-
-def _start_job(ctx: typer.Context, job: JobHandle, *, wait: bool) -> None:
-    """--no-wait prints the job id; otherwise block to a terminal state."""
-    if not wait:
-        emit(ctx, jsonlib.dumps({"job_id": job.job_id, "status": "queued"}), job.job_id)
-        return
-    try:
-        info = job.wait()
-    except DevkitError as err:
-        die(err, get_options(ctx).json)
-    human = f"job {info.id} {info.state}"
-    if info.message:
-        human += f": {info.message}"
-    for artifact_id in info.artifacts:
-        human += f"\nartifact: {artifact_id}"
-    emit(ctx, info.model_dump_json(), human)
 
 
 def _gpu_trace(
@@ -83,7 +57,10 @@ def _gpu_trace(
         job = ops.gpu_trace(core, resolve_selector(ctx, sel), timeout_s=timeout)
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _start_job(ctx, job, wait=not no_wait)
+    info = run_job(ctx, job, wait=not no_wait)
+    if info is not None and not get_options(ctx).json:
+        for line in artifact_paths_human(core, info):
+            print(line)
 
 
 def _rgp(
@@ -100,7 +77,10 @@ def _rgp(
         job = ops.rgp_capture(core, resolve_selector(ctx, sel), timeout_s=timeout)
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _start_job(ctx, job, wait=not no_wait)
+    info = run_job(ctx, job, wait=not no_wait)
+    if info is not None and not get_options(ctx).json:
+        for line in artifact_paths_human(core, info):
+            print(line)
 
 
 def _perf_overlay(
@@ -110,12 +90,12 @@ def _perf_overlay(
 ) -> None:
     """Toggle the MangoHud performance overlay."""
     try:
-        device, state = _shift(sel, state, "on|off")
+        device, state = shift_optional_selector(sel, state, missing=_MISSING_ON_OFF)
         enabled = _parse_on_off(ctx, state)
         result = ops.set_perf_overlay(make_core(ctx), resolve_selector(ctx, device), enabled)
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _emit_result(ctx, result)
+    emit_result(ctx, result)
 
 
 def _frametimes(
@@ -125,12 +105,12 @@ def _frametimes(
 ) -> None:
     """Toggle MangoHud frametime logging (fetch CSVs via logs --kind frametimes)."""
     try:
-        device, state = _shift(sel, state, "on|off")
+        device, state = shift_optional_selector(sel, state, missing=_MISSING_ON_OFF)
         enabled = _parse_on_off(ctx, state)
         result = ops.set_frametime_logging(make_core(ctx), resolve_selector(ctx, device), enabled)
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _emit_result(ctx, result)
+    emit_result(ctx, result)
 
 
 def _renderdoc_layer(
@@ -142,12 +122,12 @@ def _renderdoc_layer(
 ) -> None:
     """Toggle the RenderDoc Vulkan capture layer flag."""
     try:
-        device, state = _shift(sel, state, "on|off")
+        device, state = shift_optional_selector(sel, state, missing=_MISSING_ON_OFF)
         enabled = _parse_on_off(ctx, state)
         result = ops.set_renderdoc_layer(make_core(ctx), resolve_selector(ctx, device), enabled)
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _emit_result(ctx, result)
+    emit_result(ctx, result)
 
 
 def _renderdoc_server(
@@ -157,7 +137,9 @@ def _renderdoc_server(
 ) -> None:
     """Start, stop, or query the RenderDoc replay server."""
     try:
-        device, action = _shift(sel, action, "start|stop|status")
+        device, action = shift_optional_selector(
+            sel, action, missing="missing start|stop|status argument"
+        )
         lowered = action.lower()
         if lowered not in ("start", "stop", "status"):
             raise DevkitError(ErrorCode.VALIDATION, f"expected start|stop|status, got {action!r}")
@@ -168,7 +150,7 @@ def _renderdoc_server(
         )
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _emit_result(ctx, result)
+    emit_result(ctx, result)
 
 
 def _proton_log(
@@ -181,7 +163,7 @@ def _proton_log(
 ) -> None:
     """Toggle Proton logging on the device."""
     try:
-        device, state = _shift(sel, state, "on|off")
+        device, state = shift_optional_selector(sel, state, missing=_MISSING_ON_OFF)
         enabled = _parse_on_off(ctx, state)
         result = ops.set_proton_logging(
             make_core(ctx),
@@ -191,7 +173,7 @@ def _proton_log(
         )
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    _emit_result(ctx, result)
+    emit_result(ctx, result)
 
 
 def register(app: typer.Typer) -> None:

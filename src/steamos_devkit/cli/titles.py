@@ -9,7 +9,14 @@ from typing import cast
 import typer
 
 from steamos_devkit import constants
-from steamos_devkit.cli.common import die, emit, get_options, make_core, resolve_selector
+from steamos_devkit.cli.common import (
+    die,
+    emit,
+    get_options,
+    make_core,
+    resolve_selector,
+    shift_optional_selector,
+)
 from steamos_devkit.constants import CompatToolAlias
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import TitleConfig
@@ -27,15 +34,7 @@ _GAMEID_ARG = (
     "Title gameid. With one positional given it is the gameid "
     "and the device defaults to the last device."
 )
-
-
-def _gameid_or_shift(sel: str | None, gameid: str | None) -> tuple[str | None, str]:
-    """``<sel> <gameid>`` with an optional selector: one positional = gameid."""
-    if gameid is not None:
-        return sel, gameid
-    if sel is None:
-        raise DevkitError(ErrorCode.VALIDATION, "missing gameid")
-    return None, sel
+_MISSING_GAMEID = "missing gameid"
 
 
 def parse_kv_pairs(pairs: list[str], flag: str) -> dict[str, str]:
@@ -80,7 +79,7 @@ def _inspect(
     """Show one title with its parsed on-device argv/env/settings sidecars."""
     core = make_core(ctx)
     try:
-        device, gameid = _gameid_or_shift(sel, gameid)
+        device, gameid = shift_optional_selector(sel, gameid, missing=_MISSING_GAMEID)
         detail = inspect_title(core, resolve_selector(ctx, device), gameid)
     except DevkitError as err:
         die(err, get_options(ctx).json)
@@ -116,7 +115,7 @@ def _configure(
     """Configure a title's launch sidecars; flags merge over the stored config."""
     core = make_core(ctx)
     try:
-        device, gameid = _gameid_or_shift(sel, gameid)
+        device, gameid = shift_optional_selector(sel, gameid, missing=_MISSING_GAMEID)
         selector = resolve_selector(ctx, device)
         stored = core.state.load_title(gameid)
         base = stored.config if stored is not None else TitleConfig()
@@ -143,7 +142,7 @@ def _register(
     """(Re)register a deployed title with the device's Steam client."""
     core = make_core(ctx)
     try:
-        device, gameid = _gameid_or_shift(sel, gameid)
+        device, gameid = shift_optional_selector(sel, gameid, missing=_MISSING_GAMEID)
         result = register_title(core, resolve_selector(ctx, device), gameid)
     except DevkitError as err:
         die(err, get_options(ctx).json)
@@ -161,7 +160,7 @@ def _delete(
     """Delete a deployed title from the device (destructive; needs --confirm)."""
     core = make_core(ctx)
     try:
-        device, gameid = _gameid_or_shift(sel, gameid)
+        device, gameid = shift_optional_selector(sel, gameid, missing=_MISSING_GAMEID)
         if not confirm:
             raise DevkitError(
                 ErrorCode.VALIDATION,
@@ -181,7 +180,7 @@ def _launch(
     """Ask the device's Steam client to run a title."""
     core = make_core(ctx)
     try:
-        device, gameid = _gameid_or_shift(sel, gameid)
+        device, gameid = shift_optional_selector(sel, gameid, missing=_MISSING_GAMEID)
         launched = launch_title(core, resolve_selector(ctx, device), gameid)
         if not launched.launched:
             raise DevkitError(

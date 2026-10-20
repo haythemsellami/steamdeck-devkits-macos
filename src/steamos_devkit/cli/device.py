@@ -12,8 +12,7 @@ import typer
 from steamos_devkit import capabilities as capabilities_mod
 from steamos_devkit import constants, discovery, pairing
 from steamos_devkit import status as status_mod
-from steamos_devkit.cli.common import die, emit, get_options, make_core
-from steamos_devkit.core import DevkitCore
+from steamos_devkit.cli.common import die, emit, get_options, make_core, resolve_selector
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import (
     Capabilities,
@@ -24,20 +23,6 @@ from steamos_devkit.models import (
 )
 
 _TIMEOUT_PAIR_HELP = "Seconds to wait for on-device approval of the pairing request."
-
-
-def _selector_or_last(core: DevkitCore, selector: str | None) -> str:
-    """Explicit selector wins; otherwise the last-device marker (spec section 5)."""
-    if selector is not None:
-        return selector
-    last = core.state.last_device
-    if last is None:
-        raise DevkitError(
-            ErrorCode.VALIDATION,
-            "no device given and no device on record; pass a name or IP "
-            "(see `devkit discover` / `devkit pair`)",
-        )
-    return last
 
 
 def _dump_models(models: list[DiscoveredDevice] | list[Device]) -> str:
@@ -146,7 +131,7 @@ def _devices_forget(
     """Remove a device from the local registry; the device itself is untouched."""
     core = make_core(ctx)
     try:
-        name = _selector_or_last(core, selector)
+        name = resolve_selector(ctx, selector)
         entry = core.state.devices.get(name)
         if entry is None:
             raise DevkitError(
@@ -177,7 +162,7 @@ def _pair(
     """Pair with a device: register our SSH key via the device approval prompt."""
     core = make_core(ctx)
     try:
-        name = _selector_or_last(core, selector)
+        name = resolve_selector(ctx, selector)
         result = pairing.pair(core, name, timeout_s=timeout)
         if not result.ok:
             die(
@@ -204,7 +189,7 @@ def _status(
     """Read device status via steamos-get-status."""
     core = make_core(ctx)
     try:
-        report = status_mod.get_status(core, _selector_or_last(core, selector))
+        report = status_mod.get_status(core, resolve_selector(ctx, selector))
     except DevkitError as err:
         die(err, get_options(ctx).json)
     emit(ctx, report.model_dump_json(), _render_status(report))
@@ -235,7 +220,7 @@ def _shell(
     """Open an interactive SSH shell to the device in a new terminal window."""
     core = make_core(ctx)
     try:
-        device = core.resolve_device(_selector_or_last(core, selector))
+        device = core.resolve_device(resolve_selector(ctx, selector))
         key_path = core.state.key_path
         if not key_path.exists():
             raise DevkitError(ErrorCode.PAIRING_FAILED, "no devkit key; run `devkit pair` first")

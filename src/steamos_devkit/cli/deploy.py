@@ -9,7 +9,6 @@ last-device marker when omitted.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Literal, cast
 
@@ -17,7 +16,14 @@ import typer
 from pydantic import ValidationError
 
 from steamos_devkit import constants
-from steamos_devkit.cli.common import die, emit, get_options, make_core, resolve_selector
+from steamos_devkit.cli.common import (
+    die,
+    emit,
+    get_options,
+    make_core,
+    resolve_selector,
+    run_job,
+)
 from steamos_devkit.errors import DevkitError, ErrorCode
 from steamos_devkit.models import DeploySpec, FilterSpec
 from steamos_devkit.titles import deploy as deploy_job
@@ -109,17 +115,9 @@ def _deploy(
             emit(ctx, result.model_dump_json(), human)
             return
         handle = deploy_job(core, sel, spec, timeout_s=timeout)
-        if no_wait:
-            emit(
-                ctx,
-                json.dumps({"job_id": handle.job_id, "state": "queued"}),
-                f"job {handle.job_id} submitted; `devkit jobs wait {handle.job_id}` to follow it",
-            )
-            return
-        info = handle.wait()
     except DevkitError as err:
         die(err, get_options(ctx).json)
-    emit(ctx, info.model_dump_json(), info.message or "deploy complete")
+    run_job(ctx, handle, wait=not no_wait)
 
 
 def register(app: typer.Typer) -> None:
