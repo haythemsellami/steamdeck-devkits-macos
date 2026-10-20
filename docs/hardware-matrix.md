@@ -44,6 +44,16 @@ rsync rsh strings carry `ConnectTimeout=10` so dead hosts fail fast (488424b).
 The `[hardware-matrix]` stdout lines were captured by pytest and lost; records
 now also append to `$DEVKIT_STATE_DIR/hardware-records.jsonl` (conftest fix).
 
+## MCP transport runs
+
+The overview's example workflow driven through the MCP server (stdio) by
+`scripts/mcp_smoke.py` — a model-agnostic driver using the official mcp SDK
+client, no LLM host required.
+
+| Run | Devkit commit | Date | Result | Steps |
+|---|---|---|---|---|
+| 1 | `2872c25` + `scripts/mcp_smoke.py` | 2026-10-20 | pass | tools surface (33), device present, status, configure_title, preview_deploy (1 file, 41 B), deploy job succeeded, launch accepted (readiness `unknown`), fetch_logs job + artifact, screenshot job + artifact with PNG verified via the `devkit://artifact/<id>` resource, cleanup delete |
+
 ## Run log
 
 Append one subsection per hardware run. Template:

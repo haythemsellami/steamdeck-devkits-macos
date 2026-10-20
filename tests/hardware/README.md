@@ -44,3 +44,11 @@ result. That matrix is the **only** source that may promote an operation to
 `supported_tested` in the capabilities API (see AGENTS.md, "Capability
 honesty"). A row that was not run green on hardware stays
 `supported_untested` — no exceptions.
+
+## MCP transport validation
+
+`scripts/mcp_smoke.py <device>` drives the milestone-1 workflow (pair →
+configure → preview → deploy → launch → logs → screenshot → cleanup) through
+the MCP server over stdio, using the official `mcp` SDK client — the same
+JSON-RPC an LLM host speaks, with no LLM involved. Results land in the "MCP
+transport runs" section of `docs/hardware-matrix.md`.
