@@ -59,6 +59,6 @@ Reproduce: `scripts/build-app.sh && scripts/embed-python.sh && scripts/bundle-rs
 
 - Spec §2.1 lists a single `scripts/notarize-spike.sh`; the spike delivered five composable scripts instead (build/embed/bundle/sign/notarize). **Spec layout should be updated to match.**
 - Bundle id `dev.steamosdevkit.mac` is the spec's placeholder — replace with a controlled domain before real distribution.
-- D4 requires rsync GPLv3 attribution + source-offer notice in distributed bundles; not added in the spike (no distribution yet). Required before M8.
+- D4 licensing follow-through: rsync GPLv3 attribution + source offer are done — `LICENSES/rsync-GPLv3.txt` (verbatim from upstream's `third-party-licenses/GPL-3.txt`, matching Valve's Windows-bundle practice) and the index/source offer in `LICENSES/README.md`. Still **pending**: the embedded Python runtime's license notices (the python-build-standalone tarball's own `licenses/` entries) — add them under `LICENSES/` when the runtime ships in a distributed build. Both are required before M8 distribution.
 - The spike app is throwaway (D2); M7's real GUI reuses only the pipeline scripts, not the source.
 - `app/.runtime/`, `app/build/`, `app/.signing/` are gitignored; no signing material is ever committed.

@@ -111,8 +111,9 @@ DEVKIT_TEST_DEVICE=deck uv run pytest tests/hardware -v
 
 ## License
 
-MIT (this project) with upstream attribution in
-[`LICENSES/upstream-steamos-devkit-MIT.txt`](LICENSES/upstream-steamos-devkit-MIT.txt).
-Distributed builds will bundle rsync 3.x (GPLv3): the attribution and
-source-offer notice are required before distribution and are tracked in
-[`docs/packaging-spike.md`](docs/packaging-spike.md) — **pending**.
+MIT (this project). Third-party notices live in
+[`LICENSES/`](LICENSES/README.md): upstream steamos-devkit attribution
+(`upstream-steamos-devkit-MIT.txt`) and — for distributed builds that bundle
+rsync 3.x — the GPLv3 text with the source offer (`rsync-GPLv3.txt`). The
+embedded Python runtime's notices are still **pending**, tracked in
+[`docs/packaging-spike.md`](docs/packaging-spike.md).
