@@ -13,6 +13,8 @@ Mechanics:
 
 Rationale: the audit shows a genuinely GUI-free, pseudo-CLI-shaped core and a platform-neutral device protocol — reuse cost is low, upstream parity is the main long-term asset, and a rewrite buys nothing.
 
+**Addendum (2026-10-20, external review A1) — what the vendored snapshot actually is.** The vendored `devkit_client/` client core turned out to be **reference, not foundation**: no production module imports it. Production modules (`device.py`, `titles.py`, `diagnostics.py`, …) implement the protocol directly per `docs/audit-upstream.md`, and `tests/unit/test_vendor.py` parity-tests the vendored core only for importability and the audited protocol constants. What is genuinely consumed at runtime from the snapshot is `_vendor/devkit-utils/` — the device-side helper tree, used verbatim and rsynced to `~/devkit-utils` by `DeviceHandle.ensure_utils`. `scripts/sync-upstream.sh` + `patches/` continue to manage the **whole** vendored snapshot, reference included. Standing risk, accepted: if the upstream *protocol* changes, our reimplementation must be updated by hand — keeping the vendored client core in the tree (and the audit citations pointing into it) is what makes that drift visible and fixable.
+
 Reversible: yes, at the wrapper boundary — if upstream restructures, the typed API + adapter layer isolates frontends.
 
 ## D2 — GUI: native SwiftUI shell over a bundled headless bridge

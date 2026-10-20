@@ -7,8 +7,11 @@ MCP server. One shared typed core (`DevkitCore`) powers the CLI, the MCP
 server, and (later) a SwiftUI GUI — no frontend contains device logic.
 
 Upstream protocol and device-side helpers come from Valve's
-[steamos-devkit](https://gitlab.steamos.cloud/devkit/steamos-devkit), vendored
-at a pinned commit (`src/steamos_devkit/_vendor/`).
+[steamos-devkit](https://gitlab.steamos.cloud/devkit/steamos-devkit): the
+protocol is implemented directly from the audited upstream source
+(`docs/audit-upstream.md`), the vendored snapshot at
+`src/steamos_devkit/_vendor/` is retained as the protocol reference, and its
+`devkit-utils/` device-side helpers are rsynced verbatim to paired devices.
 
 ## Status
 

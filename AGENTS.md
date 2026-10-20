@@ -6,7 +6,7 @@ Open-source SteamOS Devkit client for macOS (Apple Silicon first): shared Python
 
 - One shared implementation: CLI/MCP/GUI contain no device logic; everything goes through `DevkitCore` (`src/steamos_devkit/core.py`) returning typed pydantic results. Core code never prints and never raises bare exceptions across the API boundary — only `DevkitError` with an `ErrorCode`.
 - Vendored upstream lives in `src/steamos_devkit/_vendor/` and is **read-only** in normal work. Changes to it go through `patches/` + `scripts/sync-upstream.sh` (see `docs/decisions.md` D1). `_vendor/UPSTREAM_COMMIT` records the pinned sha.
-- Device-side helpers in `_vendor/devkit-utils/` are the protocol — used verbatim, never "improved".
+- Device-side helpers in `_vendor/devkit-utils/` are the protocol — used verbatim, never "improved" — and are the only vendored code that runs (rsynced to `~/devkit-utils` by `DeviceHandle.ensure_utils`). The vendored client core (`_vendor/devkit_client/`) is **reference-only**: production modules implement the protocol directly per `docs/audit-upstream.md`; the snapshot stays as protocol evidence and is parity-tested for importability in `tests/unit/test_vendor.py` (D1 addendum, 2026-10-20).
 - Never commit secrets, private keys, or real device IPs/hostnames in fixtures (use `192.0.2.x` TEST-NET addresses).
 - Capability honesty: `supported_tested` may only be asserted for operations recorded green in `docs/hardware-matrix.md`. No faking device behaviors the upstream protocol lacks (stop-title, readiness, stdout streaming) — report `unsupported_upstream`.
 
