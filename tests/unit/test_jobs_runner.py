@@ -135,3 +135,38 @@ def test_progress_lands_in_journal(runner: JobRunner) -> None:
     assert info.progress is not None
     assert info.progress.phase == "transferring"
     assert info.progress.bytes_done == 5
+
+
+def test_run_process_preserves_utf8_char_split_across_reads(runner: JobRunner) -> None:
+    # 'é' is 0xC3 0xA9 in UTF-8; the child flushes the first byte, sleeps so
+    # the pump drains it as its own read, then flushes the rest.
+    child = (
+        "import sys, time; "
+        "sys.stdout.buffer.write(b'h\\xc3'); sys.stdout.flush(); "
+        "time.sleep(0.3); "
+        "sys.stdout.buffer.write(b'\\xa9llo\\n'); sys.stdout.flush()"
+    )
+    lines: list[str] = []
+
+    def fn(ctx: JobContext) -> None:
+        code = ctx.run_process([sys.executable, "-c", child], on_output=lines.append)
+        assert code == 0
+
+    handle = runner.submit(fn, kind=JobKind.DEPLOY)
+    handle.wait()
+    assert lines == ["héllo"]
+
+
+def test_run_process_flushes_unterminated_tail(runner: JobRunner) -> None:
+    lines: list[str] = []
+
+    def fn(ctx: JobContext) -> None:
+        code = ctx.run_process(
+            [sys.executable, "-c", "import sys; sys.stdout.write('partial')"],
+            on_output=lines.append,
+        )
+        assert code == 0
+
+    handle = runner.submit(fn, kind=JobKind.DEPLOY)
+    handle.wait()
+    assert lines == ["partial"]

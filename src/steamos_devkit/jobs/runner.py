@@ -125,14 +125,15 @@ class JobContext:
         def drain(chunk: bytes) -> None:
             nonlocal buffer
             buffer += chunk
-            text = buffer.decode("utf-8", errors="replace")
-            records = split_records(text)
-            if text and text[-1] not in "\r\n" and records:
-                buffer = records.pop().encode()  # tail may be an incomplete record
-            else:
-                buffer = b""
+            # Split on raw separator bytes and decode only complete records:
+            # a multi-byte UTF-8 character straddling two reads stays intact
+            # in the byte tail instead of decaying into a permanent U+FFFD.
+            cut = max(buffer.rfind(b"\r"), buffer.rfind(b"\n"))
+            if cut < 0:
+                return
+            complete, buffer = buffer[:cut], buffer[cut + 1 :]
             if on_output is not None:
-                for record in records:
+                for record in split_records(complete.decode("utf-8", errors="replace")):
                     on_output(record)
 
         while True:
@@ -144,7 +145,7 @@ class JobContext:
                 tail = proc.stdout.read() or b""
                 if tail:
                     drain(tail)
-                if buffer and on_output is not None:
+                if buffer.strip() and on_output is not None:
                     on_output(buffer.decode("utf-8", errors="replace"))
                 return proc.returncode if proc.returncode is not None else -1
             if not chunk:
