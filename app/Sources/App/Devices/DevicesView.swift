@@ -89,7 +89,7 @@ struct DevicesOverviewView: View {
                             Text(device.name).font(.headline)
                             FamilyBadge(family: device.family)
                         }
-                        Text("\(device.address):\(device.port) — login \(device.login)")
+                        Text("\(device.address):\(String(device.port)) — login \(device.login)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text("paired \(Format.date(device.pairedAt)) — last seen \(Format.lastSeen(device.lastSeen))")

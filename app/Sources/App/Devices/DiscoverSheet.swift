@@ -186,7 +186,7 @@ struct DiscoverSheet: View {
                                 ViaBadge(via: device.via)
                             }
                             Text(
-                                "\(device.address):\(device.port)"
+                                "\(device.address):\(String(device.port))"
                                     + " — login \(device.login ?? "?")"
                                     + " — sshd \(device.sshd == true ? "yes" : device.sshd == false ? "no" : "?")"
                             )
