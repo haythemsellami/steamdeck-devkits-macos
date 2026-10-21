@@ -67,8 +67,8 @@ final class DiscoverViewModel {
                 let result = try await bridge.pair(device: target, timeoutSeconds: 120)
                 if Task.isCancelled { pairPhase = .idle; return }
                 if result.ok {
-                    pairPhase = .succeeded(result.message ?? "paired")
                     await appState.refreshDevices()
+                    pairPhase = .succeeded(result.message ?? "paired")
                 } else {
                     pairPhase = .failed(BannerModel(
                         kind: .error, code: result.code,
