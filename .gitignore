@@ -22,6 +22,8 @@ build/
 app/build/
 app/.runtime/
 app/.signing/
+app/.packaging/
+app/.build-tests/
 
 # Local run logs (may contain lab IPs); matrix + records are the durable artifacts
 docs/hardware-runs/

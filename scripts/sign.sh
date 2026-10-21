@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# sign.sh — code-sign DevkitSpike.app inside-out with the hardened runtime:
-#   nested dylibs/extensions → helper executables (python3, rsync) → bundle.
+# sign.sh — code-sign the app bundle inside-out with the hardened runtime:
+#   python-packages native extensions (*.so/*.dylib) → remaining nested
+#   dylibs/extensions → helper executables (python3, rsync) → bundle seal.
+#
+# Usage: scripts/sign.sh [app-path]   (default: app/build/SteamOSDevkit.app)
 #
 # Identity: the first "Developer ID Application" from the keychain. When none
 # exists the script falls back to an AD-HOC signature (-) so the pipeline is
@@ -8,7 +11,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="$REPO_ROOT/app/build/DevkitSpike.app"
+APP_DIR="${1:-$REPO_ROOT/app/build/SteamOSDevkit.app}"
 ENTITLEMENTS="$REPO_ROOT/app/entitlements.plist"
 
 [[ -d $APP_DIR ]] || {
@@ -69,17 +72,31 @@ sign_one() {
     echo "    signed: ${path#"$APP_DIR"/}"
 }
 
+# Inside-out sweep. python-packages' native extensions (pydantic-core,
+# cryptography, nacl, …) are listed first explicitly by name; the general
+# magic-byte sweep of Contents/Resources then catches everything else
+# (embedded python's .so extensions, Tcl/Tk dylibs, bundled rsync dylibs),
+# de-duplicated. Executables (MH_EXECUTE) receive the entitlements — they are
+# the processes that load third-party dylibs; MH_BUNDLE/MH_DYLIB do not.
+{
+    find "$APP_DIR/Contents/Resources/python-packages" \
+        \( -name '*.so' -o -name '*.dylib' \) -type f 2>/dev/null | sort
+    find "$APP_DIR/Contents/Resources" -type f ! -name '*.plist' | sort -r
+} | awk '!seen[$0]++' >"$APP_DIR/../.sign-sweep.$$"
+trap 'rm -f "$APP_DIR/../.sign-sweep.$$"' EXIT
+
+SIGNED_COUNT=0
 echo "==> sign: nested code under Contents/Resources (inside-out)"
 while IFS= read -r f; do
+    is_macho "$f" || continue
     if is_executable_macho "$f"; then
-        # Executables that may load third-party dylibs get the entitlements.
         sign_one "$f" yes
     else
         sign_one "$f" no
     fi
-done < <(find "$APP_DIR/Contents/Resources" -type f ! -name '*.plist' | sort -r | while read -r f; do
-    is_macho "$f" && echo "$f"
-done)
+    SIGNED_COUNT=$((SIGNED_COUNT + 1))
+done <"$APP_DIR/../.sign-sweep.$$"
+echo "==> sign: $SIGNED_COUNT nested Mach-O file(s) signed"
 
 echo "==> sign: main executable + bundle seal"
 sign_one "$APP_DIR" yes
