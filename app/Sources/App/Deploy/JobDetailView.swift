@@ -33,10 +33,10 @@ final class JobDetailViewModel {
         if appState.jobs[jobID] == nil {
             await appState.refreshJob(jobID)
             if appState.jobs[jobID] == nil {
-                error = ErrorPresentation.model(for: BridgeError.devkit(DevkitErrorPayload(
+                error = ErrorPresentation.model(for: DevkitErrorPayload(
                     code: ErrorCodes.jobNotFound,
                     message: "no job '\(jobID)' known to the server",
-                    details: nil, remoteExitCode: nil)))
+                    details: nil, remoteExitCode: nil))
             }
         }
         await appState.refreshArtifacts()
@@ -50,7 +50,9 @@ final class JobDetailViewModel {
             _ = try await bridge.jobCancel(jobId: jobID)
             await appState.refreshJob(jobID)
         } catch let failure {
-            error = ErrorPresentation.model(for: failure)
+            if let model = ErrorPresentation.model(for: failure) {
+                error = model
+            }
         }
     }
 }

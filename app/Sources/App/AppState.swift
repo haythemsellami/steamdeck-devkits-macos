@@ -139,7 +139,9 @@ final class AppState {
     }
 
     func present(_ error: Error) {
-        banner = ErrorPresentation.model(for: error)
+        if let model = ErrorPresentation.model(for: error) {
+            banner = model
+        }
     }
 
     func presentInfo(_ message: String) {

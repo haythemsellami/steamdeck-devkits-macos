@@ -56,7 +56,9 @@ final class DeviceControlsViewModel {
             outcome = .info(result.message ?? "done")
             if refreshesStatus { await onStatusChanged?() }
         } catch {
-            outcome = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                outcome = model
+            }
         }
     }
 

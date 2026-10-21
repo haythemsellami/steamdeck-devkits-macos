@@ -37,7 +37,16 @@ enum ErrorPresentation {
         "The device did not approve pairing in time. Start pairing again and "
         + "approve the request on your Steam Deck within two minutes."
 
-    static func model(for error: Error) -> BannerModel {
+    /// Maps an error to a banner, or nil when the error is mere task
+    /// cancellation — `.task` cancels in-flight work whenever its view
+    /// disappears (navigation, sheet dismissal), which is control flow, not a
+    /// failure. Every call site must skip presentation for nil.
+    static func model(for error: Error) -> BannerModel? {
+        if error is CancellationError { return nil }
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain && nsError.code == NSUserCancelledError {
+            return nil
+        }
         switch error {
         case BridgeError.devkit(let payload):
             return model(for: payload)
@@ -185,10 +194,10 @@ struct ErrorBanner: View {
 struct ErrorBanner_Previews: PreviewProvider {
     static var previews: some View {
         VStack {
-            ErrorBanner(model: ErrorPresentation.model(for: BridgeError.devkit(DevkitErrorPayload(
+            ErrorBanner(model: ErrorPresentation.model(for: DevkitErrorPayload(
                 code: ErrorCodes.permissionLocalNetwork,
                 message: "local network permission denied (errno 65)",
-                details: ["errno": .int(65)], remoteExitCode: nil))))
+                details: ["errno": .int(65)], remoteExitCode: nil)))
             ErrorBanner(model: .info("title zz_devkit_test configured"))
         }
         .padding()

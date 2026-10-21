@@ -52,7 +52,9 @@ final class DiscoverViewModel {
             discovered = try await bridge.discover(timeoutSeconds: 5)
         } catch {
             discovered = []
-            discoverError = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                discoverError = model
+            }
         }
     }
 
@@ -77,7 +79,11 @@ final class DiscoverViewModel {
                 }
             } catch {
                 if Task.isCancelled { pairPhase = .idle; return }
-                pairPhase = .failed(ErrorPresentation.model(for: error))
+                if let model = ErrorPresentation.model(for: error) {
+                    pairPhase = .failed(model)
+                } else {
+                    pairPhase = .idle
+                }
             }
         }
     }

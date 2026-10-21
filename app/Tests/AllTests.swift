@@ -56,6 +56,7 @@ enum AllTests {
         ("localNetworkPermissionHasRemediation", ErrorPresentationTests.localNetworkPermissionHasRemediation),
         ("pairingErrorsHaveFriendlyWording", ErrorPresentationTests.pairingErrorsHaveFriendlyWording),
         ("transportAndRpcErrorsMap", ErrorPresentationTests.transportAndRpcErrorsMap),
+        ("cancellationIsNeverPresented", ErrorPresentationTests.cancellationIsNeverPresented),
         ("imageArtifactDecodesToNSImage", ArtifactsVMTests.imageArtifactDecodesToNSImage),
         ("textArtifactReadsExcerpt", ArtifactsVMTests.textArtifactReadsExcerpt),
         ("unknownSelectionFails", ArtifactsVMTests.unknownSelectionFails),

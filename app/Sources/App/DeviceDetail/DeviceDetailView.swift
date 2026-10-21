@@ -38,7 +38,9 @@ final class DeviceDetailViewModel {
             loadError = nil
         } catch {
             appState.markReachable(deviceName, false)
-            loadError = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                loadError = model
+            }
             return
         }
         capabilities = try? await bridge.capabilities(device: deviceName)

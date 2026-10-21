@@ -86,7 +86,9 @@ final class TitleConfigFormModel {
             didLoad = true
             loadError = nil
         } catch {
-            loadError = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                loadError = model
+            }
         }
     }
 
@@ -99,7 +101,9 @@ final class TitleConfigFormModel {
                 device: deviceName, gameid: gameid, config: draft.makeConfig())
             saveOutcome = .info(result.message ?? "title \(gameid) configured")
         } catch {
-            saveOutcome = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                saveOutcome = model
+            }
         }
     }
 }

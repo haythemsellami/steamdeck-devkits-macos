@@ -79,7 +79,9 @@ final class ArtifactsViewModel {
                 preview = .noPreview
             }
         } catch {
-            preview = .failed(ErrorPresentation.model(for: error))
+            if let model = ErrorPresentation.model(for: error) {
+                preview = .failed(model)
+            }
         }
     }
 

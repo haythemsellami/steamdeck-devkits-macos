@@ -45,7 +45,9 @@ final class JobsViewModel {
             polledJobs = Dictionary(list.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
             error = nil
         } catch {
-            self.error = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                self.error = model
+            }
         }
     }
 
@@ -66,7 +68,9 @@ final class JobsViewModel {
             await appState.refreshJob(jobID)
             await refresh()
         } catch let failure {
-            error = ErrorPresentation.model(for: failure)
+            if let model = ErrorPresentation.model(for: failure) {
+                error = model
+            }
         }
     }
 

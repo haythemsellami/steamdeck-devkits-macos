@@ -120,7 +120,9 @@ final class DeployViewModel {
                 filters: FilterSpec(mode: filterMode, patterns: filterPatterns),
                 clean: clean)
         } catch {
-            formError = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                formError = model
+            }
         }
     }
 
@@ -138,7 +140,9 @@ final class DeployViewModel {
             startedJobID = start.jobId
             appState.showJob(start.jobId)
         } catch {
-            formError = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                formError = model
+            }
         }
     }
 }

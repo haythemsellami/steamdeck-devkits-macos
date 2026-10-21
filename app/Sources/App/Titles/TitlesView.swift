@@ -51,7 +51,9 @@ final class TitlesViewModel {
             titles = try await bridge.listTitles(device: deviceName)
             loadError = nil
         } catch {
-            loadError = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                loadError = model
+            }
         }
     }
 
@@ -71,7 +73,9 @@ final class TitlesViewModel {
         do {
             try await operation()
         } catch {
-            actionOutcome = ErrorPresentation.model(for: error)
+            if let model = ErrorPresentation.model(for: error) {
+                actionOutcome = model
+            }
         }
     }
 
