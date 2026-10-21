@@ -10,7 +10,6 @@ Exit 0 iff all fixtures validate; prints one line per fixture.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 from steamos_devkit import models as m

@@ -45,7 +45,9 @@ SERVER_INFO = {"name": "fake-devkit", "version": "0.0.0"}
 
 # A valid 1x1 red PNG (69 bytes), sha256 b1ff9c8e…4640. Served as the blob of
 # devkit://artifact/art_FAKE.
-FAKE_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+FAKE_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+)
 
 RUNNING_JOB = "job_01J9ZE0000000000000000000A"
 SUCCEEDED_JOB = "job_01J9ZE0000000000000000000B"
@@ -177,8 +179,11 @@ def _call_tool(req_id, params: dict, slow_slot: dict) -> bool:
             _tool_error(
                 req_id,
                 name,
-                {"code": "DEVICE_UNREACHABLE", "message": "cannot reach boom",
-                 "details": {"target": "boom"}},
+                {
+                    "code": "DEVICE_UNREACHABLE",
+                    "message": "cannot reach boom",
+                    "details": {"target": "boom"},
+                },
                 prefixed=False,
             )
             return False
@@ -186,8 +191,11 @@ def _call_tool(req_id, params: dict, slow_slot: dict) -> bool:
             _tool_error(
                 req_id,
                 name,
-                {"code": "DEVICE_UNREACHABLE", "message": "cannot reach boom-prefix",
-                 "details": {"target": "boom-prefix"}},
+                {
+                    "code": "DEVICE_UNREACHABLE",
+                    "message": "cannot reach boom-prefix",
+                    "details": {"target": "boom-prefix"},
+                },
                 prefixed=True,
             )
             return False
@@ -294,13 +302,15 @@ def main() -> int:
             if uri == "devkit://artifact/art_FAKE":
                 _result(
                     req_id,
-                    {"contents": [
-                        {"uri": uri, "mimeType": "image/png", "blob": FAKE_PNG_B64}
-                    ]},
+                    {"contents": [{"uri": uri, "mimeType": "image/png", "blob": FAKE_PNG_B64}]},
                 )
             else:
-                _error(req_id, -32602, f"[ARTIFACT_NOT_FOUND] no such artifact: {uri}",
-                       data={"uri": uri})
+                _error(
+                    req_id,
+                    -32602,
+                    f"[ARTIFACT_NOT_FOUND] no such artifact: {uri}",
+                    data={"uri": uri},
+                )
             _flush_slow(slow_slot)
             continue
 
