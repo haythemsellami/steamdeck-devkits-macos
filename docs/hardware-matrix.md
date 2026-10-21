@@ -61,6 +61,7 @@ The GUI's exact data path: Swift `MCPBridge` (`app/Sources/Bridge/Internal/`) �
 | Run | Devkit commit | Date | Result | Steps |
 |---|---|---|---|---|
 | 1 | `ba3f039` | 2026-10-21 | pass | listDevices + status (hostname `steamdeck`, SteamOS 20260922.1, steam OS) → configureTitle → previewDeploy (2 files, 45 B) → deploy job succeeded with 5 push progress events on the GUI notification channel → launch accepted (readiness `unknown`) → fetch_logs artifact listed + read → screenshot job → PNG (1,028,477 B, magic bytes verified) via `resources/read` → cleanup delete. A same-day earlier attempt failed fast with `DEVICE_UNREACHABLE`/`REMOTE_COMMAND_FAILED` while the Deck was asleep — the bridge decoded both structured error payloads correctly, so the error path is hardware-proven too. |
+| 2 | `024f083` | 2026-10-22 | pass | Run 1 repeated through the **bundled runtime** (`Contents/Resources/python` + `python-packages` + bundled rsync — the app's exact launch shape, via `DEVKIT_MCP_COMMAND`): status, configure, preview, deploy (5 progress events), launch, logs artifact, screenshot PNG (887,889 B), cleanup. Proves the packaged app's runtime drives the device end to end. |
 
 ## Run log
 
