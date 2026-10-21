@@ -8,11 +8,10 @@ import Foundation
 
 enum BridgeSetup {
     static func makeProductionBridge() -> any DevkitBridge {
-        // INTEGRATOR-REPLACE: MCPBridge landed in Bridge/Internal — swap to
-        //   MCPBridge(launchConfig: BridgeLaunchConfig.fromEnvironment())
-        // (or .dev(repoRoot:) / .bundled(resources:) per packaging), keeping
-        // MockBridge as the no-server fallback. Verify Transport.swift is
-        // settled (it was mid-edit by the bridge agent when this was written).
-        MockBridge(scenario: .populated)
+        // The production app always runs the real MCP stdio client; MockBridge
+        // stays in previews and view-model tests. A server that cannot spawn
+        // surfaces as a BridgeError through the normal banner — no silent
+        // fake-data fallback.
+        MCPBridge(launchConfig: .fromEnvironment())
     }
 }

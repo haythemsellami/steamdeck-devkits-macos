@@ -8,10 +8,18 @@ import Foundation
 //   - Tool names/args:   src/steamos_devkit/mcp_server.py (spec section 11)
 //   - Error codes:       src/steamos_devkit/errors.py (ErrorCode)
 //
-// Wire facts the implementation relies on (verified against mcp_server.py):
-//   - Transport is MCP stdio: newline-delimited JSON-RPC 2.0, UTF-8.
+// Wire facts the implementation relies on (verified empirically against the
+// real server, mcp SDK 2.3.0, during the M7 bridge bring-up):
+//   - Transport is MCP stdio: newline-delimited JSON-RPC 2.0, UTF-8. The
+//     initialize handshake negotiates protocolVersion "2025-06-18".
+//   - Successful tool results always carry `structuredContent` (collection
+//     results wrapped as {"result": [...]}); decode prefers it.
 //   - Tool errors come back as `isError: true` results whose first text content
-//     is a JSON object: {"code", "message", "details"?, "remote_exit_code"?}.
+//     is the JSON payload {"code", "message", "details"?, "remote_exit_code"?}
+//     PREFIXED with "Error executing tool <name>: " (SDK behavior) — parse from
+//     the first '{'.
+//   - `resources/read` failures are JSON-RPC error responses (-32602), not
+//     isError results.
 //   - Job-starting tools return {"job_id", "status": "queued"} immediately.
 //     When the call carries `_meta.progressToken`, the server bridges journal
 //     progress to connection-level `notifications/progress` (params:

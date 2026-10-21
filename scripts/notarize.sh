@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# notarize.sh — submit DevkitSpike.app to Apple's notary service via
+# notarize.sh — submit SteamOSDevkit.app to Apple's notary service via
 # `xcrun notarytool` using the keychain profile "devkit-notarize", then staple
 # the ticket. If the profile is missing, print exact setup instructions and
 # exit 2.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="$REPO_ROOT/app/build/DevkitSpike.app"
+APP_DIR="$REPO_ROOT/app/build/SteamOSDevkit.app"
 ZIP_PATH="$REPO_ROOT/app/build/DevkitSpike-notarize.zip"
 PROFILE="${NOTARY_PROFILE:-devkit-notarize}"
 
