@@ -30,3 +30,6 @@ docs/hardware-runs/
 
 # Local devkit state during development
 .devkit-state/
+
+# CLT Swift test harness output (M7)
+app/.build-tests/

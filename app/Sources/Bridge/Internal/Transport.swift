@@ -1,23 +1,76 @@
 import Foundation
 
-/// Carry a non-Sendable Foundation handle into the single detached reader
-/// task that exclusively owns it. Only ever read from that one task.
-struct UnsafeSendableBox<Value>: @unchecked Sendable {
-    let value: Value
+/// Lock-protected accumulator that splits arbitrary byte chunks into complete
+/// lines (\n-delimited, UTF-8). Callable from the readabilityHandler queue;
+/// tolerates arbitrarily long lines and partial reads. A trailing partial
+/// line is emitted on `flush()`.
+final class LineSplitter: @unchecked Sendable {
+    private var buffer = Data()
+    private let lock = NSLock()
+
+    func append(_ data: Data) -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        buffer.append(data)
+        var lines: [String] = []
+        while let newline = buffer.firstIndex(of: 0x0A) {
+            let lineData = buffer.subdata(in: buffer.startIndex..<newline)
+            buffer.removeSubrange(buffer.startIndex...newline)
+            if let line = String(data: lineData, encoding: .utf8) {
+                lines.append(line)
+            }
+        }
+        return lines
+    }
+
+    /// Any unterminated remainder, once, at EOF.
+    func flush() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !buffer.isEmpty else { return nil }
+        let remainder = buffer
+        buffer.removeAll()
+        return String(data: remainder, encoding: .utf8)
+    }
+}
+
+/// Bounded last-N-lines ring for server stderr (diagnostics only).
+final class StderrRing: @unchecked Sendable {
+    private var lines: [String] = []
+    private let limit: Int
+    private let lock = NSLock()
+
+    init(limit: Int) { self.limit = limit }
+
+    func append(_ line: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        lines.append(line)
+        if lines.count > limit {
+            lines.removeFirst(lines.count - limit)
+        }
+    }
+
+    func snapshot() -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return lines
+    }
 }
 
 /// Process + byte plumbing for one MCP stdio server (newline-delimited
 /// JSON-RPC 2.0, UTF-8, one message per line).
 ///
-/// - stdout is consumed with `FileHandle.bytes.lines`, which tolerates
-///   arbitrarily long lines and partial reads (multi-MB base64 artifact blobs
-///   come through as single lines).
-/// - stderr is drained into a bounded ring (last 100 lines) for diagnostics;
-///   it carries server logs, never protocol bytes.
-/// - On unexpected process termination every consumer observes it:
-///   `termination` yields once with a human-readable reason and both streams
-///   finish. The JSONRPC layer turns that into `BridgeError.transport` for
-///   all pending requests.
+/// - stdout/stderr are read with `FileHandle.readabilityHandler` (serialized
+///   per handle), split into lines by a lock-protected `LineSplitter` — this
+///   tolerates arbitrarily long lines (multi-MB base64 artifact blobs) and
+///   partial reads, and delivers lines in wire order. (`FileHandle.bytes.lines`
+///   was tried first and silently never delivered in this configuration.)
+/// - stderr goes to a bounded ring (last 100 lines) for diagnostics; it
+///   carries server logs, never protocol bytes.
+/// - On unexpected process termination or stdout EOF, `termination` yields
+///   once with a human-readable reason and both streams finish. The JSONRPC
+///   layer turns that into `BridgeError.transport` for all pending requests.
 actor StdioTransport {
     struct Diagnostics: Sendable, Equatable {
         var running: Bool
@@ -34,11 +87,10 @@ actor StdioTransport {
     private var state: State = .idle
     private var process: Process?
     private var stdinHandle: FileHandle?
-    private var readerTask: Task<Void, Never>?
-    private var stderrTask: Task<Void, Never>?
+    private var readHandle: FileHandle?
+    private var errorHandle: FileHandle?
 
-    private var stderrRing: [String] = []
-    private let stderrLimit = 100
+    private nonisolated let stderrRing = StderrRing(limit: 100)
 
     /// Complete stdout lines in wire order; finished when the transport ends.
     nonisolated let lines: AsyncStream<String>
@@ -103,7 +155,7 @@ actor StdioTransport {
         process.standardError = stderrPipe
 
         process.terminationHandler = { [weak self] process in
-            self?.processTerminated(process)
+            Task { await self?.died(reason: "exit code \(process.terminationStatus)") }
         }
 
         do {
@@ -117,27 +169,45 @@ actor StdioTransport {
         self.process = process
         stdinHandle = stdinPipe.fileHandleForWriting
 
-        let stdout = UnsafeSendableBox(value: stdoutPipe.fileHandleForReading)
+        // stdout: complete lines in wire order. readabilityHandler is
+        // serialized per handle, and the splitter only emits complete lines in
+        // arrival order, so yields are correctly ordered.
         let lineContinuation = self.lineContinuation
-        readerTask = Task.detached { [weak self] in
-            do {
-                for try await line in stdout.value.bytes.lines {
-                    lineContinuation.yield(line)
+        let stdoutSplitter = LineSplitter()
+        let readHandle = stdoutPipe.fileHandleForReading
+        self.readHandle = readHandle
+        readHandle.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+                if let remainder = stdoutSplitter.flush() {
+                    lineContinuation.yield(remainder)
                 }
-            } catch {
-                // Cancellation or read failure; the termination path reports.
+                lineContinuation.finish()
+                Task { await self?.stdoutEnded() }
+                return
             }
-            await self?.stdoutEnded()
+            for line in stdoutSplitter.append(data) {
+                lineContinuation.yield(line)
+            }
         }
 
-        let stderr = UnsafeSendableBox(value: stderrPipe.fileHandleForReading)
-        stderrTask = Task.detached { [weak self] in
-            do {
-                for try await line in stderr.value.bytes.lines {
-                    await self?.appendStderr(line)
+        // stderr: diagnostics ring only, appended synchronously (lock-safe).
+        let stderrRing = self.stderrRing
+        let stderrSplitter = LineSplitter()
+        let errorHandle = stderrPipe.fileHandleForReading
+        self.errorHandle = errorHandle
+        errorHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+                if let remainder = stderrSplitter.flush() {
+                    stderrRing.append(remainder)
                 }
-            } catch {
-                // Cancellation or read failure; stderr is diagnostics only.
+                return
+            }
+            for line in stderrSplitter.append(data) {
+                stderrRing.append(line)
             }
         }
     }
@@ -156,32 +226,25 @@ actor StdioTransport {
         }
     }
 
-    /// Intentional shutdown: terminate the process, end the streams, and stop
-    /// the readers. Pending requests are failed by the JSONRPC layer's own
-    /// close path, which runs first.
+    /// Intentional shutdown: terminate the process, end the streams, stop the
+    /// readers. Pending requests are failed by the JSONRPC layer's own close
+    /// path, which runs first.
     func close() async {
         guard state != .closed else { return }
         state = .closed
         let process = self.process
         self.process = nil
+        readHandle?.readabilityHandler = nil
+        errorHandle?.readabilityHandler = nil
         lineContinuation.finish()
         terminationContinuation.finish()
-        readerTask?.cancel()
-        stderrTask?.cancel()
         try? stdinHandle?.close()
         stdinHandle = nil
         process?.terminate()
     }
 
     func diagnostics() -> Diagnostics {
-        Diagnostics(running: state == .running, stderrTail: stderrRing)
-    }
-
-    private func appendStderr(_ line: String) {
-        stderrRing.append(line)
-        if stderrRing.count > stderrLimit {
-            stderrRing.removeFirst(stderrRing.count - stderrLimit)
-        }
+        Diagnostics(running: state == .running, stderrTail: stderrRing.snapshot())
     }
 
     private func stdoutEnded() {
@@ -189,19 +252,15 @@ actor StdioTransport {
         died(reason: "stdout closed")
     }
 
-    private nonisolated func processTerminated(_ process: Process) {
-        Task { await self.died(reason: "exit code \(process.terminationStatus)") }
-    }
-
     private func died(reason: String) {
         guard state == .running else { return }
         state = .closed
         process = nil
+        readHandle?.readabilityHandler = nil
+        errorHandle?.readabilityHandler = nil
         terminationContinuation.yield(reason)
         lineContinuation.finish()
         terminationContinuation.finish()
-        readerTask?.cancel()
-        stderrTask?.cancel()
         try? stdinHandle?.close()
         stdinHandle = nil
     }
