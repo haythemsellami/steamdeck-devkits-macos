@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # bundle-rsync.sh — copy the Homebrew rsync 3.x binary into
-# DevkitSpike.app/Contents/Resources/bin/, walk its non-system dylib closure
-# with otool, copy those into Contents/Resources/lib/, and rewrite all load
-# commands to @rpath so the binary runs without Homebrew present.
+# <app>/Contents/Resources/bin/, walk its non-system dylib closure with otool,
+# copy those into Contents/Resources/lib/, and rewrite all load commands to
+# @rpath so the binary runs without Homebrew present.
+#
+# Usage: scripts/bundle-rsync.sh [app-path]   (default: app/build/SteamOSDevkit.app)
 #
 # The payload is always rebuilt from the pristine Homebrew originals, so the
 # script is idempotent (re-running never rewrites an already-rewritten file).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="$REPO_ROOT/app/build/DevkitSpike.app"
+APP_DIR="${1:-$REPO_ROOT/app/build/SteamOSDevkit.app}"
 RSYNC_SRC="${DEVKIT_RSYNC:-/opt/homebrew/bin/rsync}"
 BIN_DIR="$APP_DIR/Contents/Resources/bin"
 LIB_DIR="$APP_DIR/Contents/Resources/lib"

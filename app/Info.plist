@@ -7,11 +7,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleName</key>
-	<string>DevkitSpike</string>
+	<string>SteamOSDevkit</string>
 	<key>CFBundleDisplayName</key>
-	<string>DevkitSpike</string>
+	<string>SteamOS Devkit</string>
 	<key>CFBundleExecutable</key>
-	<string>DevkitSpike</string>
+	<string>SteamOSDevkit</string>
 	<key>CFBundleIdentifier</key>
 	<string>dev.steamosdevkit.mac</string>
 	<key>CFBundleVersion</key>

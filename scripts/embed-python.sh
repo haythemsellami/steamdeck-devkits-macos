@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # embed-python.sh — download a pinned python-build-standalone CPython 3.12
 # (aarch64-apple-darwin) into app/.runtime/ (gitignored), verify its SHA-256,
-# and install it into DevkitSpike.app/Contents/Resources/python/.
+# and install it into <app>/Contents/Resources/python/.
+#
+# Usage: scripts/embed-python.sh [app-path]   (default: app/build/SteamOSDevkit.app)
 #
 # Idempotent: the tarball is cached, extraction is stamped, and the bundle
 # install is skipped when the installed copy already matches the pinned sha.
@@ -19,7 +21,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNTIME_DIR="$REPO_ROOT/app/.runtime"
 TARBALL="$RUNTIME_DIR/cache/$PBS_ASSET"
 EXTRACT_DIR="$RUNTIME_DIR/extract/cpython-${PBS_PYTHON_VERSION}+${PBS_TAG}"
-APP_DIR="$REPO_ROOT/app/build/DevkitSpike.app"
+APP_DIR="${1:-$REPO_ROOT/app/build/SteamOSDevkit.app}"
 DEST="$APP_DIR/Contents/Resources/python"
 STAMP_NAME=".devkit-runtime-sha256"
 

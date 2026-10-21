@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# build-app.sh — compile the M0.5 SwiftUI spike shell with swiftc (no .xcodeproj)
-# and assemble app/build/DevkitSpike.app.
+# build-app.sh — compile every Swift source under app/Sources/ with swiftc
+# (no .xcodeproj) and assemble app/build/SteamOSDevkit.app.
+#
+# All of app/Sources/**/*.swift is compiled into one module (sorted for
+# reproducibility); exactly one of them must declare @main. The script carries
+# no payload-specific logic: whichever sources are present are what gets built.
 #
 # Idempotent: the bundle directory is rebuilt from scratch on every run.
 set -euo pipefail
@@ -9,8 +13,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_SRC_DIR="$REPO_ROOT/app/Sources"
 INFO_PLIST="$REPO_ROOT/app/Info.plist"
 BUILD_DIR="$REPO_ROOT/app/build"
-APP_DIR="$BUILD_DIR/DevkitSpike.app"
-APP_NAME="DevkitSpike"
+APP_NAME="SteamOSDevkit"
+APP_DIR="$BUILD_DIR/$APP_NAME.app"
 TARGET="arm64-apple-macosx14.0"
 
 echo "==> build-app: assembling $APP_DIR"
@@ -30,7 +34,7 @@ plutil -lint "$INFO_PLIST"
 # with a real typecheck and use the first compatible one.
 choose_sdk() {
     local probe candidates=() sdk
-    probe="$(mktemp -t devkitspike-sdkprobe).swift"
+    probe="$(mktemp -t steamosdevkit-sdkprobe).swift"
     echo 'import SwiftUI' >"$probe"
     if [[ -n ${SDK_PATH_OVERRIDE:-} ]]; then
         candidates+=("$SDK_PATH_OVERRIDE")
@@ -49,7 +53,7 @@ choose_sdk() {
         [[ -n $c && -d $c ]] || continue
         [[ $seen == *" $c "* ]] && continue
         seen+="$c "
-        if swiftc -target "$TARGET" -sdk "$c" -typecheck "$probe" >/dev/null 2>&1; then
+        if swiftc -swift-version 6 -target "$TARGET" -sdk "$c" -typecheck "$probe" >/dev/null 2>&1; then
             rm -f "$probe"
             echo "$c"
             return 0
@@ -66,20 +70,28 @@ SDK_PATH="$(choose_sdk)" || {
 }
 echo "==> build-app: using SDK $SDK_PATH"
 
+SOURCES=()
+while IFS= read -r f; do SOURCES+=("$f"); done \
+    < <(find "$APP_SRC_DIR" -type f -name '*.swift' | sort)
+((${#SOURCES[@]} > 0)) || { echo "error: no Swift sources under $APP_SRC_DIR" >&2; exit 1; }
+echo "==> build-app: ${#SOURCES[@]} Swift source(s):"
+printf '    %s\n' "${SOURCES[@]#"$REPO_ROOT"/}"
+
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
-echo "==> build-app: compiling Swift sources (-target $TARGET)"
-# Single-module build; @main lives in DevkitSpike.swift. -parse-as-library is
-# required: with one source file, swiftc otherwise treats top-level statements
-# as the entry point and rejects @main.
+echo "==> build-app: compiling (-swift-version 6 -target $TARGET)"
+# Single-module build; exactly one source declares @main. -parse-as-library is
+# required: with a single source file, swiftc otherwise treats top-level
+# statements as the entry point and rejects @main.
 swiftc -O \
+    -swift-version 6 \
     -parse-as-library \
     -target "$TARGET" \
     -sdk "$SDK_PATH" \
     -module-name "$APP_NAME" \
     -o "$APP_DIR/Contents/MacOS/$APP_NAME" \
-    "$APP_SRC_DIR"/*.swift
+    "${SOURCES[@]}"
 
 cp "$INFO_PLIST" "$APP_DIR/Contents/Info.plist"
 
@@ -87,4 +99,4 @@ echo "==> build-app: bundle structure:"
 find "$APP_DIR" -type f | sed "s|$BUILD_DIR/||"
 
 echo "==> build-app: OK ($APP_DIR)"
-echo "    next: scripts/embed-python.sh && scripts/bundle-rsync.sh && scripts/sign.sh"
+echo "    next: scripts/embed-python.sh && scripts/embed-core.sh && scripts/bundle-rsync.sh && scripts/sign.sh"
