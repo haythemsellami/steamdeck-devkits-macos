@@ -1,0 +1,231 @@
+{
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "context": "mcp_stdio",
+    "python_version": "3.12.12",
+    "state_dir": "/var/folders/9n/z6d_38hj0wz2x0rpjp469y780000gn/T/devkit-probe-state-36v10ndf",
+    "state_dir_writable": true,
+    "rsync": {
+      "path": "/opt/homebrew/bin/rsync",
+      "flavor": "rsync",
+      "version": "3.5.1",
+      "protocol_version": 33,
+      "source": "homebrew",
+      "ok": true,
+      "message": null
+    },
+    "ssh_path": "/usr/bin/ssh",
+    "ssh_version": "OpenSSH_10.3p1",
+    "terminal": "iTerm2",
+    "local_network": "unknown"
+  },
+  "device": null,
+  "operations": {
+    "doctor": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "discover": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "list_devices": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "forget_device": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "pair": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "capabilities": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "job_status": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "job_cancel": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "list_jobs": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "list_artifacts": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "read_artifact": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "migrate": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "setup": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "version": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "shell": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "status": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "list_titles": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "inspect_title": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "configure_title": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "preview_deploy": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "deploy": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "register_title": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "launch_title": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "delete_title": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "fetch_logs": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "screenshot": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "controller_config": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "perf_overlay": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "frametimes": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "renderdoc_layer": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "renderdoc_server": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "proton_logging": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "set_steam_mode": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "set_session": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "reload_steam": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "gpu_trace": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "rgp_capture": {
+      "status": "supported_untested",
+      "reason": null,
+      "dependency": null
+    },
+    "vs_remote_debug": {
+      "status": "unavailable_host",
+      "reason": "msvsmon deployment is a Windows-host-only upstream feature",
+      "dependency": null
+    },
+    "stop_title": {
+      "status": "unsupported_upstream",
+      "reason": "the upstream protocol has no such device operation (audit-upstream.md section 7); we report this honestly instead of faking it",
+      "dependency": null
+    },
+    "launch_readiness": {
+      "status": "unsupported_upstream",
+      "reason": "the upstream protocol has no such device operation (audit-upstream.md section 7); we report this honestly instead of faking it",
+      "dependency": null
+    },
+    "title_stdout_streaming": {
+      "status": "unsupported_upstream",
+      "reason": "the upstream protocol has no such device operation (audit-upstream.md section 7); we report this honestly instead of faking it",
+      "dependency": null
+    }
+  }
+}

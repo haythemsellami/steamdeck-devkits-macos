@@ -1,0 +1,6207 @@
+{
+  "tools": [
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Probe host dependencies: rsync/ssh/terminal/state dir. Creates the\n        state-dir layout and a writability probe file (local mutation).",
+      "inputSchema": {
+        "properties": {},
+        "type": "object",
+        "title": "devkit_doctorArguments"
+      },
+      "name": "devkit_doctor",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "context": {
+            "enum": [
+              "cli",
+              "bundled_app",
+              "mcp_stdio"
+            ],
+            "title": "Context",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "arch": {
+            "title": "Arch",
+            "type": "string"
+          },
+          "python_version": {
+            "title": "Python Version",
+            "type": "string"
+          },
+          "state_dir": {
+            "format": "path",
+            "title": "State Dir",
+            "type": "string"
+          },
+          "tools": {
+            "$ref": "#/$defs/ToolAvailability"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/$defs/DoctorCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "context",
+          "platform",
+          "arch",
+          "python_version",
+          "state_dir",
+          "tools"
+        ],
+        "type": "object",
+        "$defs": {
+          "DoctorCheck": {
+            "description": "One doctor() finding.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "ok",
+                  "warning",
+                  "error",
+                  "unknown"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "summary": {
+                "title": "Summary",
+                "type": "string"
+              },
+              "details": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Details",
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "status",
+              "summary"
+            ],
+            "title": "DoctorCheck",
+            "type": "object"
+          },
+          "RsyncInfo": {
+            "description": "Probe result for one rsync candidate (spec sections 9 and 12).",
+            "properties": {
+              "path": {
+                "anyOf": [
+                  {
+                    "format": "path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Path"
+              },
+              "flavor": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "rsync",
+                      "openrsync",
+                      "unknown"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Flavor"
+              },
+              "version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Version"
+              },
+              "protocol_version": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Protocol Version"
+              },
+              "source": {
+                "default": "none",
+                "enum": [
+                  "env",
+                  "bundled",
+                  "homebrew",
+                  "cygwin",
+                  "path",
+                  "none"
+                ],
+                "title": "Source",
+                "type": "string"
+              },
+              "ok": {
+                "default": false,
+                "title": "Ok",
+                "type": "boolean"
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Message"
+              }
+            },
+            "title": "RsyncInfo",
+            "type": "object"
+          },
+          "ToolAvailability": {
+            "description": "Aggregate host dependency probe (spec section 12).",
+            "properties": {
+              "rsync": {
+                "$ref": "#/$defs/RsyncInfo"
+              },
+              "ssh_path": {
+                "anyOf": [
+                  {
+                    "format": "path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Ssh Path"
+              },
+              "ssh_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Ssh Version"
+              },
+              "terminal": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Terminal"
+              },
+              "filezilla": {
+                "anyOf": [
+                  {
+                    "format": "path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Filezilla"
+              }
+            },
+            "required": [
+              "rsync"
+            ],
+            "title": "ToolAvailability",
+            "type": "object"
+          }
+        },
+        "description": "Full host report from DevkitCore.doctor() (spec section 15, M0).",
+        "title": "DoctorReport"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Browse mDNS for SteamOS devkits. Discovery is progressive\n        enhancement: an empty result may mean the MCP host lacks macOS Local\n        Network permission \u2014 connect by name/IP instead (decision D3).",
+      "inputSchema": {
+        "properties": {
+          "timeout_s": {
+            "default": 5.0,
+            "description": "Discovery window in seconds",
+            "exclusiveMinimum": 0,
+            "maximum": 300,
+            "title": "Timeout S",
+            "type": "number"
+          }
+        },
+        "type": "object",
+        "title": "devkit_discoverArguments"
+      },
+      "name": "devkit_discover",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "$ref": "#/$defs/DiscoveredDevice"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "$defs": {
+          "DiscoveredDevice": {
+            "description": "A device found via mDNS or added explicitly, before registration.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "format": "ipv4",
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Login"
+              },
+              "sshd": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Sshd"
+              },
+              "via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Via",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "via"
+            ],
+            "title": "DiscoveredDevice",
+            "type": "object"
+          }
+        },
+        "title": "devkit_discoverOutput"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "List the registered (paired or explicitly added) devices.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object",
+        "title": "devkit_list_devicesArguments"
+      },
+      "name": "devkit_list_devices",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "$ref": "#/$defs/Device"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          }
+        },
+        "title": "devkit_list_devicesOutput"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Remove a device from the local registry; the device is untouched.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_forget_deviceArguments"
+      },
+      "name": "devkit_forget_device",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Register our key with a device; approval happens on the device UI.\n        A declined/timed-out request is a normal failure Result, not an error.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "timeout_s": {
+            "default": 120,
+            "description": "Pairing window in seconds",
+            "exclusiveMinimum": 0,
+            "maximum": 3600,
+            "title": "Timeout S",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_pairArguments"
+      },
+      "name": "devkit_pair",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Read device status via steamos-get-status. Mutates the device on\n        first contact per process (devkit-utils upload) and refreshes the\n        registry entry's last_seen/family.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_statusArguments"
+      },
+      "name": "devkit_status",
+      "outputSchema": {
+        "properties": {
+          "hostname": {
+            "title": "Hostname",
+            "type": "string"
+          },
+          "os_name": {
+            "title": "Os Name",
+            "type": "string"
+          },
+          "os_version": {
+            "title": "Os Version",
+            "type": "string"
+          },
+          "is_deckard": {
+            "title": "Is Deckard",
+            "type": "boolean"
+          },
+          "session_status": {
+            "title": "Session Status",
+            "type": "string"
+          },
+          "steam_status": {
+            "enum": [
+              "NOT_RUNNING",
+              "ERROR",
+              "OS",
+              "OS_DEV",
+              "SIDELOADED",
+              "UNKNOWN"
+            ],
+            "title": "Steam Status",
+            "type": "string"
+          },
+          "steam_osclient_branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Steam Osclient Branch"
+          },
+          "steam_osclient_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Steam Osclient Version"
+          },
+          "cef_debugging_enabled": {
+            "title": "Cef Debugging Enabled",
+            "type": "boolean"
+          },
+          "renderdoc_layer_enabled": {
+            "title": "Renderdoc Layer Enabled",
+            "type": "boolean"
+          },
+          "renderdoc_replay_server_running": {
+            "title": "Renderdoc Replay Server Running",
+            "type": "boolean"
+          },
+          "user_password_is_set": {
+            "title": "User Password Is Set",
+            "type": "boolean"
+          },
+          "steam_default_args": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Steam Default Args",
+            "type": "array"
+          },
+          "steam_current_args": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Steam Current Args",
+            "type": "array"
+          },
+          "steam_launch_flags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Steam Launch Flags",
+            "type": "object"
+          },
+          "raw": {
+            "additionalProperties": true,
+            "title": "Raw",
+            "type": "object"
+          }
+        },
+        "required": [
+          "hostname",
+          "os_name",
+          "os_version",
+          "is_deckard",
+          "session_status",
+          "steam_status",
+          "cef_debugging_enabled",
+          "renderdoc_layer_enabled",
+          "renderdoc_replay_server_running",
+          "user_password_is_set"
+        ],
+        "type": "object",
+        "description": "Parsed ``steamos-get-status --json`` output (audit section 4).",
+        "title": "DeviceStatus"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Honest capability report (probes, never hardcoded). With ``device``\n        omitted, host capabilities only. Probes mutate local state (state-dir\n        probe file) and, with a device, may upload devkit-utils once per\n        process. Tools never refuse on capability grounds \u2014 this report is how\n        a caller learns support status.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Device"
+          }
+        },
+        "type": "object",
+        "title": "devkit_capabilitiesArguments"
+      },
+      "name": "devkit_capabilities",
+      "outputSchema": {
+        "properties": {
+          "host": {
+            "$ref": "#/$defs/HostCapabilities"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/DeviceCapabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "operations": {
+            "additionalProperties": {
+              "$ref": "#/$defs/OperationCapability"
+            },
+            "title": "Operations",
+            "type": "object"
+          }
+        },
+        "required": [
+          "host"
+        ],
+        "type": "object",
+        "$defs": {
+          "DeviceCapabilities": {
+            "description": "Device feature probes from steamos-get-status plus feature checks.",
+            "properties": {
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "os_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Os Version"
+              },
+              "steam_branch": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Steam Branch"
+              },
+              "steam_version": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Steam Version"
+              },
+              "has_gpu_trace": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Has Gpu Trace"
+              },
+              "gamescope_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Gamescope Version"
+              },
+              "renderdoc_layer_enabled": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Renderdoc Layer Enabled"
+              },
+              "renderdoc_replay_server_running": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Renderdoc Replay Server Running"
+              },
+              "cef_debugging_enabled": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Cef Debugging Enabled"
+              },
+              "has_mangohudctl": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Has Mangohudctl"
+              },
+              "session_select": {
+                "default": "unknown",
+                "enum": [
+                  "holo-session-select",
+                  "steamos-session-select",
+                  "unknown"
+                ],
+                "title": "Session Select",
+                "type": "string"
+              }
+            },
+            "title": "DeviceCapabilities",
+            "type": "object"
+          },
+          "HostCapabilities": {
+            "description": "Everything the host can do, built from probes (never hardcoded).",
+            "properties": {
+              "platform": {
+                "title": "Platform",
+                "type": "string"
+              },
+              "arch": {
+                "title": "Arch",
+                "type": "string"
+              },
+              "context": {
+                "enum": [
+                  "cli",
+                  "bundled_app",
+                  "mcp_stdio"
+                ],
+                "title": "Context",
+                "type": "string"
+              },
+              "python_version": {
+                "title": "Python Version",
+                "type": "string"
+              },
+              "state_dir": {
+                "format": "path",
+                "title": "State Dir",
+                "type": "string"
+              },
+              "state_dir_writable": {
+                "title": "State Dir Writable",
+                "type": "boolean"
+              },
+              "rsync": {
+                "$ref": "#/$defs/RsyncInfo"
+              },
+              "ssh_path": {
+                "anyOf": [
+                  {
+                    "format": "path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Ssh Path"
+              },
+              "ssh_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Ssh Version"
+              },
+              "terminal": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Terminal"
+              },
+              "local_network": {
+                "default": "unknown",
+                "enum": [
+                  "unknown",
+                  "likely_ok",
+                  "blocked"
+                ],
+                "title": "Local Network",
+                "type": "string"
+              }
+            },
+            "required": [
+              "platform",
+              "arch",
+              "context",
+              "python_version",
+              "state_dir",
+              "state_dir_writable",
+              "rsync"
+            ],
+            "title": "HostCapabilities",
+            "type": "object"
+          },
+          "OperationCapability": {
+            "description": "Support status of one CLI command / MCP tool (spec section 9).",
+            "properties": {
+              "status": {
+                "enum": [
+                  "supported_tested",
+                  "supported_untested",
+                  "dependency_required",
+                  "capture_export_only",
+                  "unavailable_host",
+                  "unavailable_device",
+                  "unsupported_upstream"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reason"
+              },
+              "dependency": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Dependency"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "title": "OperationCapability",
+            "type": "object"
+          },
+          "RsyncInfo": {
+            "description": "Probe result for one rsync candidate (spec sections 9 and 12).",
+            "properties": {
+              "path": {
+                "anyOf": [
+                  {
+                    "format": "path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Path"
+              },
+              "flavor": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "rsync",
+                      "openrsync",
+                      "unknown"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Flavor"
+              },
+              "version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Version"
+              },
+              "protocol_version": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Protocol Version"
+              },
+              "source": {
+                "default": "none",
+                "enum": [
+                  "env",
+                  "bundled",
+                  "homebrew",
+                  "cygwin",
+                  "path",
+                  "none"
+                ],
+                "title": "Source",
+                "type": "string"
+              },
+              "ok": {
+                "default": false,
+                "title": "Ok",
+                "type": "boolean"
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Message"
+              }
+            },
+            "title": "RsyncInfo",
+            "type": "object"
+          }
+        },
+        "description": "Host plus optional device capabilities, and the per-operation matrix.",
+        "title": "Capabilities"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "List devkit titles deployed on the device (steamos-list-games).\n        May upload devkit-utils on first contact per process.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_list_titlesArguments"
+      },
+      "name": "devkit_list_titles",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "$ref": "#/$defs/Title"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "$defs": {
+          "Title": {
+            "description": "A deployed devkit title, from ``steamos-list-games`` plus sidecars.",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "registered_with_steam": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Registered With Steam"
+              },
+              "size_bytes": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Size Bytes"
+              },
+              "modified": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Modified"
+              }
+            },
+            "required": [
+              "gameid"
+            ],
+            "title": "Title",
+            "type": "object"
+          }
+        },
+        "title": "devkit_list_titlesOutput"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "A title plus its on-device argv/env/settings launch configuration.\n        May upload devkit-utils on first contact per process.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "gameid"
+        ],
+        "type": "object",
+        "title": "devkit_inspect_titleArguments"
+      },
+      "name": "devkit_inspect_title",
+      "outputSchema": {
+        "properties": {
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          },
+          "registered_with_steam": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registered With Steam"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Size Bytes"
+          },
+          "modified": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Modified"
+          },
+          "config": {
+            "$ref": "#/$defs/TitleConfig"
+          },
+          "remote_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Remote Dir"
+          }
+        },
+        "required": [
+          "gameid"
+        ],
+        "type": "object",
+        "$defs": {
+          "TitleConfig": {
+            "description": "Launch configuration for a title (spec section 5).",
+            "properties": {
+              "entrypoint": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Entrypoint"
+              },
+              "args": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Args",
+                "type": "array"
+              },
+              "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Env",
+                "type": "object"
+              },
+              "runtime": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "proton-stable",
+                      "proton-experimental",
+                      "SteamLinuxRuntime",
+                      "SteamLinuxRuntime_sniper",
+                      "lepton",
+                      "SteamLinuxRuntime_4-arm64",
+                      "SteamLinuxRuntime_4"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Runtime"
+              },
+              "settings": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Settings",
+                "type": "object"
+              }
+            },
+            "title": "TitleConfig",
+            "type": "object"
+          }
+        },
+        "description": "A title together with its parsed on-device launch configuration.",
+        "title": "TitleDetail"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Write a title's argv/env/settings sidecars (TitleConfig fields).",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          },
+          "entrypoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Entrypoint"
+          },
+          "args": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Args"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Env"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "enum": [
+                  "proton-stable",
+                  "proton-experimental",
+                  "SteamLinuxRuntime",
+                  "SteamLinuxRuntime_sniper",
+                  "lepton",
+                  "SteamLinuxRuntime_4-arm64",
+                  "SteamLinuxRuntime_4"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Runtime"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Settings"
+          }
+        },
+        "required": [
+          "device",
+          "gameid"
+        ],
+        "type": "object",
+        "title": "devkit_configure_titleArguments"
+      },
+      "name": "devkit_configure_title",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Dry-run a deploy (rsync -n --itemize-changes); never mutates the device.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          },
+          "source_dir": {
+            "format": "path",
+            "title": "Source Dir",
+            "type": "string"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/FilterSpec"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "clean": {
+            "default": false,
+            "title": "Clean",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device",
+          "gameid",
+          "source_dir"
+        ],
+        "type": "object",
+        "$defs": {
+          "FilterSpec": {
+            "description": "rsync filter selection for deploys.",
+            "properties": {
+              "mode": {
+                "default": "exclude",
+                "enum": [
+                  "exclude",
+                  "include",
+                  "raw"
+                ],
+                "title": "Mode",
+                "type": "string"
+              },
+              "patterns": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Patterns",
+                "type": "array"
+              }
+            },
+            "title": "FilterSpec",
+            "type": "object"
+          }
+        },
+        "title": "devkit_preview_deployArguments"
+      },
+      "name": "devkit_preview_deploy",
+      "outputSchema": {
+        "properties": {
+          "files_added": {
+            "title": "Files Added",
+            "type": "integer"
+          },
+          "files_changed": {
+            "title": "Files Changed",
+            "type": "integer"
+          },
+          "files_deleted": {
+            "title": "Files Deleted",
+            "type": "integer"
+          },
+          "bytes_to_transfer": {
+            "title": "Bytes To Transfer",
+            "type": "integer"
+          },
+          "sample_changes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample Changes",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "files_added",
+          "files_changed",
+          "files_deleted",
+          "bytes_to_transfer"
+        ],
+        "type": "object",
+        "description": "Result of ``rsync -n --itemize-changes`` (never mutates the device).",
+        "title": "DeployPreview"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Upload a title tree to the device as a background job.\n\n        Returns the job id immediately; follow with devkit_job_status /\n        devkit_job_cancel. ``checksum`` and ``update`` are mutually exclusive.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          },
+          "source_dir": {
+            "format": "path",
+            "title": "Source Dir",
+            "type": "string"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/FilterSpec"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "clean": {
+            "default": false,
+            "title": "Clean",
+            "type": "boolean"
+          },
+          "checksum": {
+            "default": false,
+            "title": "Checksum",
+            "type": "boolean"
+          },
+          "update": {
+            "default": false,
+            "title": "Update",
+            "type": "boolean"
+          },
+          "compress": {
+            "default": true,
+            "title": "Compress",
+            "type": "boolean"
+          },
+          "register": {
+            "default": true,
+            "title": "Register",
+            "type": "boolean"
+          },
+          "launch": {
+            "default": false,
+            "title": "Launch",
+            "type": "boolean"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TitleConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "device",
+          "gameid",
+          "source_dir"
+        ],
+        "type": "object",
+        "$defs": {
+          "FilterSpec": {
+            "description": "rsync filter selection for deploys.",
+            "properties": {
+              "mode": {
+                "default": "exclude",
+                "enum": [
+                  "exclude",
+                  "include",
+                  "raw"
+                ],
+                "title": "Mode",
+                "type": "string"
+              },
+              "patterns": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Patterns",
+                "type": "array"
+              }
+            },
+            "title": "FilterSpec",
+            "type": "object"
+          },
+          "TitleConfig": {
+            "description": "Launch configuration for a title (spec section 5).",
+            "properties": {
+              "entrypoint": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Entrypoint"
+              },
+              "args": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Args",
+                "type": "array"
+              },
+              "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Env",
+                "type": "object"
+              },
+              "runtime": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "proton-stable",
+                      "proton-experimental",
+                      "SteamLinuxRuntime",
+                      "SteamLinuxRuntime_sniper",
+                      "lepton",
+                      "SteamLinuxRuntime_4-arm64",
+                      "SteamLinuxRuntime_4"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Runtime"
+              },
+              "settings": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Settings",
+                "type": "object"
+              }
+            },
+            "title": "TitleConfig",
+            "type": "object"
+          }
+        },
+        "title": "devkit_deployArguments"
+      },
+      "name": "devkit_deploy",
+      "outputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "queued",
+            "default": "queued",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "description": "Immediate answer of every job-starting tool (spec section 11).",
+        "title": "JobStarted"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Register an uploaded title with the device's Steam client.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "gameid"
+        ],
+        "type": "object",
+        "title": "devkit_register_titleArguments"
+      },
+      "name": "devkit_register_title",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Ask Steam to run a title. ``readiness`` is honestly ``unknown`` \u2014\n        the upstream protocol has no readiness signal.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "gameid"
+        ],
+        "type": "object",
+        "title": "devkit_launch_titleArguments"
+      },
+      "name": "devkit_launch_title",
+      "outputSchema": {
+        "properties": {
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          },
+          "launched": {
+            "title": "Launched",
+            "type": "boolean"
+          },
+          "device_response": {
+            "default": "",
+            "title": "Device Response",
+            "type": "string"
+          },
+          "readiness": {
+            "const": "unknown",
+            "default": "unknown",
+            "title": "Readiness",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gameid",
+          "launched"
+        ],
+        "type": "object",
+        "description": "Outcome of a title launch (spec section 5).",
+        "title": "LaunchResult"
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false
+      },
+      "description": "Delete a title from the device. Destructive: ``confirm`` must be\n        exactly ``true``.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          },
+          "confirm": {
+            "const": true,
+            "title": "Confirm",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device",
+          "gameid",
+          "confirm"
+        ],
+        "type": "object",
+        "title": "devkit_delete_titleArguments"
+      },
+      "name": "devkit_delete_title",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Fetch device logs (steam/proton/dumps/frametimes) as artifacts.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "kinds": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "steam",
+                    "proton",
+                    "dumps",
+                    "frametimes"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kinds"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_fetch_logsArguments"
+      },
+      "name": "devkit_fetch_logs",
+      "outputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "queued",
+            "default": "queued",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "description": "Immediate answer of every job-starting tool (spec section 11).",
+        "title": "JobStarted"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Capture a screenshot as an image artifact (gamescope modes 1-4).",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "mode": {
+            "default": 3,
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "title": "Mode",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_screenshotArguments"
+      },
+      "name": "devkit_screenshot",
+      "outputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "queued",
+            "default": "queued",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "description": "Immediate answer of every job-starting tool (spec section 11).",
+        "title": "JobStarted"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Fetch the active controller configuration (VDF) as an artifact.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "gameid": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+            "title": "Gameid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "gameid"
+        ],
+        "type": "object",
+        "title": "devkit_controller_configArguments"
+      },
+      "name": "devkit_controller_config",
+      "outputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "queued",
+            "default": "queued",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "description": "Immediate answer of every job-starting tool (spec section 11).",
+        "title": "JobStarted"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Capture a GPU system trace (Deck-only upstream) as a zip artifact.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_gpu_traceArguments"
+      },
+      "name": "devkit_gpu_trace",
+      "outputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "queued",
+            "default": "queued",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "description": "Immediate answer of every job-starting tool (spec section 11).",
+        "title": "JobStarted"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Trigger an RGP capture (Deck-only upstream) and download it.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_rgp_captureArguments"
+      },
+      "name": "devkit_rgp_capture",
+      "outputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "queued",
+            "default": "queued",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "description": "Immediate answer of every job-starting tool (spec section 11).",
+        "title": "JobStarted"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Toggle the MangoHud performance overlay on the device.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device",
+          "enabled"
+        ],
+        "type": "object",
+        "title": "devkit_perf_overlayArguments"
+      },
+      "name": "devkit_perf_overlay",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Toggle MangoHud frametime logging; fetch CSVs via devkit_fetch_logs\n        (kinds=[\"frametimes\"]) after disabling.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device",
+          "enabled"
+        ],
+        "type": "object",
+        "title": "devkit_frametimesArguments"
+      },
+      "name": "devkit_frametimes",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Enable/disable the RenderDoc Vulkan capture layer.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device",
+          "enabled"
+        ],
+        "type": "object",
+        "title": "devkit_renderdoc_layerArguments"
+      },
+      "name": "devkit_renderdoc_layer",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Start/stop/status the RenderDoc replay server on the device.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "start",
+              "stop",
+              "status"
+            ],
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "action"
+        ],
+        "type": "object",
+        "title": "devkit_renderdoc_serverArguments"
+      },
+      "name": "devkit_renderdoc_server",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Toggle Proton logging; ``winedebug`` sets the WINEDEBUG channels.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "off",
+              "on"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "winedebug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Winedebug"
+          }
+        },
+        "required": [
+          "device",
+          "mode"
+        ],
+        "type": "object",
+        "title": "devkit_proton_loggingArguments"
+      },
+      "name": "devkit_proton_logging",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Set the main-session Steam client mode (OS or OS_DEV; SIDELOADED is\n        Valve-internal and rejected as UNSUPPORTED).",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "OS",
+              "OS_DEV"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "gameid": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Gameid"
+          },
+          "args": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Args"
+          },
+          "gdbserver": {
+            "default": false,
+            "title": "Gdbserver",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device",
+          "mode"
+        ],
+        "type": "object",
+        "title": "devkit_set_steam_modeArguments"
+      },
+      "name": "devkit_set_steam_mode",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Switch the device session (gamescope or a plasma desktop).",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "session": {
+            "enum": [
+              "gamescope",
+              "plasma-x11",
+              "plasma-wayland"
+            ],
+            "title": "Session",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "session"
+        ],
+        "type": "object",
+        "title": "devkit_set_sessionArguments"
+      },
+      "name": "devkit_set_session",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Restart the Steam client (gamescope re-entry on Deck, systemd user\n        service restart on Frame).",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "type": "object",
+        "title": "devkit_reload_steamArguments"
+      },
+      "name": "devkit_reload_steam",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Current state, progress, and artifact ids of one job.",
+      "inputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "title": "devkit_job_statusArguments"
+      },
+      "name": "devkit_job_status",
+      "outputSchema": {
+        "properties": {
+          "id": {
+            "pattern": "^job_[0-9A-HJKMNP-TV-Z]{26}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/JobKind"
+          },
+          "state": {
+            "$ref": "#/$defs/JobState"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Device"
+          },
+          "gameid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Gameid"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Finished At"
+          },
+          "timeout_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Timeout S"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JobProgress"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "created_at"
+        ],
+        "type": "object",
+        "$defs": {
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "JobKind": {
+            "description": "Long-running operation kinds (spec section 7.4).",
+            "enum": [
+              "deploy",
+              "fetch_logs",
+              "screenshot",
+              "controller_config",
+              "gpu_trace",
+              "rgp"
+            ],
+            "title": "JobKind",
+            "type": "string"
+          },
+          "JobProgress": {
+            "description": "Progress snapshot from a journal ``progress`` event (spec section 7.1).",
+            "properties": {
+              "phase": {
+                "title": "Phase",
+                "type": "string"
+              },
+              "bytes_done": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bytes Done"
+              },
+              "bytes_total": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bytes Total"
+              },
+              "items_done": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Items Done"
+              },
+              "rate_bps": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Rate Bps"
+              }
+            },
+            "required": [
+              "phase"
+            ],
+            "title": "JobProgress",
+            "type": "object"
+          },
+          "JobState": {
+            "description": "queued -> running -> one of the terminal states (spec section 7.1).",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "interrupted",
+              "timeout"
+            ],
+            "title": "JobState",
+            "type": "string"
+          }
+        },
+        "description": "Public view of a job, derived from its journal (spec section 7.1).",
+        "title": "JobInfo"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Cancel a live job owned by this server process. Terminal jobs are a\n        no-op; jobs from other processes cannot be cancelled (spec appendix A).",
+      "inputSchema": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object",
+        "title": "devkit_job_cancelArguments"
+      },
+      "name": "devkit_job_cancel",
+      "outputSchema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Device"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "upload_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Upload Complete"
+          },
+          "registration_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Complete"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LaunchResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "$defs": {
+          "Device": {
+            "description": "Registry entry for a paired or explicitly added device.",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "address": {
+                "title": "Address",
+                "type": "string"
+              },
+              "port": {
+                "default": 32000,
+                "title": "Port",
+                "type": "integer"
+              },
+              "login": {
+                "title": "Login",
+                "type": "string"
+              },
+              "family": {
+                "default": "unknown",
+                "enum": [
+                  "deck",
+                  "frame",
+                  "unknown"
+                ],
+                "title": "Family",
+                "type": "string"
+              },
+              "paired_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Paired At"
+              },
+              "added_via": {
+                "enum": [
+                  "mdns",
+                  "explicit"
+                ],
+                "title": "Added Via",
+                "type": "string"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "login",
+              "added_via"
+            ],
+            "title": "Device",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "LaunchResult": {
+            "description": "Outcome of a title launch (spec section 5).",
+            "properties": {
+              "gameid": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.]+$",
+                "title": "Gameid",
+                "type": "string"
+              },
+              "launched": {
+                "title": "Launched",
+                "type": "boolean"
+              },
+              "device_response": {
+                "default": "",
+                "title": "Device Response",
+                "type": "string"
+              },
+              "readiness": {
+                "const": "unknown",
+                "default": "unknown",
+                "title": "Readiness",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gameid",
+              "launched"
+            ],
+            "title": "LaunchResult",
+            "type": "object"
+          }
+        },
+        "description": "Envelope for every core call that does not start a job.\n\n``code`` is None exactly when ``ok`` is true. Deploy distinguishes upload,\nregistration, and launch per the overview.",
+        "title": "Result"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "List jobs, oldest first, optionally filtered by device and/or state.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Device"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JobState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "type": "object",
+        "$defs": {
+          "JobState": {
+            "description": "queued -> running -> one of the terminal states (spec section 7.1).",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "interrupted",
+              "timeout"
+            ],
+            "title": "JobState",
+            "type": "string"
+          }
+        },
+        "title": "devkit_list_jobsArguments"
+      },
+      "name": "devkit_list_jobs",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "$ref": "#/$defs/JobInfo"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "$defs": {
+          "ErrorCode": {
+            "description": "Stable machine-readable error codes (spec section 6).",
+            "enum": [
+              "DEVICE_NOT_FOUND",
+              "DEVICE_UNREACHABLE",
+              "AMBIGUOUS_DEVICE",
+              "PAIRING_DECLINED",
+              "PAIRING_TIMEOUT",
+              "PAIRING_FAILED",
+              "DEPENDENCY_MISSING",
+              "OPENRSYNC_DETECTED",
+              "PERMISSION_LOCAL_NETWORK",
+              "PERMISSION_KEY_FILE",
+              "VALIDATION",
+              "UNSUPPORTED",
+              "REMOTE_COMMAND_FAILED",
+              "TIMEOUT",
+              "CANCELLED",
+              "JOB_NOT_FOUND",
+              "ARTIFACT_NOT_FOUND",
+              "STATE_CORRUPT",
+              "INTERNAL"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "JobInfo": {
+            "description": "Public view of a job, derived from its journal (spec section 7.1).",
+            "properties": {
+              "id": {
+                "pattern": "^job_[0-9A-HJKMNP-TV-Z]{26}$",
+                "title": "Id",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/$defs/JobKind"
+              },
+              "state": {
+                "$ref": "#/$defs/JobState"
+              },
+              "device": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Device"
+              },
+              "gameid": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Gameid"
+              },
+              "created_at": {
+                "format": "date-time",
+                "title": "Created At",
+                "type": "string"
+              },
+              "started_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Started At"
+              },
+              "finished_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Finished At"
+              },
+              "timeout_s": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Timeout S"
+              },
+              "progress": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/JobProgress"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "code": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/ErrorCode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Message"
+              },
+              "artifacts": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Artifacts",
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "state",
+              "created_at"
+            ],
+            "title": "JobInfo",
+            "type": "object"
+          },
+          "JobKind": {
+            "description": "Long-running operation kinds (spec section 7.4).",
+            "enum": [
+              "deploy",
+              "fetch_logs",
+              "screenshot",
+              "controller_config",
+              "gpu_trace",
+              "rgp"
+            ],
+            "title": "JobKind",
+            "type": "string"
+          },
+          "JobProgress": {
+            "description": "Progress snapshot from a journal ``progress`` event (spec section 7.1).",
+            "properties": {
+              "phase": {
+                "title": "Phase",
+                "type": "string"
+              },
+              "bytes_done": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bytes Done"
+              },
+              "bytes_total": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bytes Total"
+              },
+              "items_done": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Items Done"
+              },
+              "rate_bps": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Rate Bps"
+              }
+            },
+            "required": [
+              "phase"
+            ],
+            "title": "JobProgress",
+            "type": "object"
+          },
+          "JobState": {
+            "description": "queued -> running -> one of the terminal states (spec section 7.1).",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "interrupted",
+              "timeout"
+            ],
+            "title": "JobState",
+            "type": "string"
+          }
+        },
+        "title": "devkit_list_jobsOutput"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "List captured artifacts with their ``devkit://artifact/<id>`` links.",
+      "inputSchema": {
+        "properties": {
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Device"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "title": "devkit_list_artifactsArguments"
+      },
+      "name": "devkit_list_artifacts",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "$ref": "#/$defs/ArtifactEntry"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "$defs": {
+          "Artifact": {
+            "description": "A captured payload stored under the state root with a meta sidecar.",
+            "properties": {
+              "id": {
+                "pattern": "^art_[0-9A-HJKMNP-TV-Z]{26}$",
+                "title": "Id",
+                "type": "string"
+              },
+              "job_id": {
+                "pattern": "^job_[0-9A-HJKMNP-TV-Z]{26}$",
+                "title": "Job Id",
+                "type": "string"
+              },
+              "device": {
+                "title": "Device",
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "logs",
+                  "proton_log",
+                  "screenshot",
+                  "controller_config",
+                  "gpu_trace",
+                  "rgp",
+                  "frametimes",
+                  "dumps"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "path": {
+                "format": "path",
+                "title": "Path",
+                "type": "string"
+              },
+              "bytes": {
+                "title": "Bytes",
+                "type": "integer"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Sha256",
+                "type": "string"
+              },
+              "media_type": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Media Type"
+              },
+              "remote_source": {
+                "title": "Remote Source",
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "title": "Created At",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "job_id",
+              "device",
+              "kind",
+              "path",
+              "bytes",
+              "sha256",
+              "remote_source",
+              "created_at"
+            ],
+            "title": "Artifact",
+            "type": "object"
+          },
+          "ArtifactEntry": {
+            "description": "An artifact record plus its MCP resource link (spec section 11).",
+            "properties": {
+              "artifact": {
+                "$ref": "#/$defs/Artifact"
+              },
+              "resource_uri": {
+                "title": "Resource Uri",
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact",
+              "resource_uri"
+            ],
+            "title": "ArtifactEntry",
+            "type": "object"
+          }
+        },
+        "title": "devkit_list_artifactsOutput"
+      }
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Bounded text excerpt (<= 2000 lines / 64 KiB) for text artifacts;\n        binary and directory artifacts come back as their resource link.",
+      "inputSchema": {
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "tail_lines": {
+            "default": 200,
+            "exclusiveMinimum": 0,
+            "maximum": 2000,
+            "title": "Tail Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id"
+        ],
+        "type": "object",
+        "title": "devkit_read_artifactArguments"
+      },
+      "name": "devkit_read_artifact",
+      "outputSchema": {
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Type"
+          },
+          "resource_uri": {
+            "title": "Resource Uri",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "kind",
+          "media_type",
+          "resource_uri",
+          "excerpt"
+        ],
+        "type": "object",
+        "description": "Answer of ``devkit_read_artifact``: bounded excerpt and/or resource link.",
+        "title": "ArtifactRead"
+      }
+    }
+  ]
+}

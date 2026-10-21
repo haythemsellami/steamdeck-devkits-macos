@@ -1,0 +1,19 @@
+{
+  "capabilities": {
+    "prompts": {
+      "listChanged": false
+    },
+    "resources": {
+      "listChanged": false,
+      "subscribe": false
+    },
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+    "name": "steamos-devkit",
+    "version": "0.0.0-dev"
+  }
+}

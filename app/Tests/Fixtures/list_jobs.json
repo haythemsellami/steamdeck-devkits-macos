@@ -1,0 +1,38 @@
+[
+  {
+    "id": "job_01J9ZE0000000000000000000A",
+    "kind": "deploy",
+    "state": "running",
+    "device": "fake-deck",
+    "gameid": "fake_game",
+    "created_at": "2026-10-21T10:00:00Z",
+    "started_at": "2026-10-21T10:00:01Z",
+    "finished_at": null,
+    "timeout_s": 600,
+    "progress": {
+      "phase": "uploading",
+      "bytes_done": 512,
+      "bytes_total": 1024,
+      "items_done": null,
+      "rate_bps": 256.5
+    },
+    "code": null,
+    "message": null,
+    "artifacts": []
+  },
+  {
+    "id": "job_01J9ZE0000000000000000000B",
+    "kind": "screenshot",
+    "state": "succeeded",
+    "device": "fake-deck",
+    "gameid": null,
+    "created_at": "2026-10-21T09:00:00Z",
+    "started_at": "2026-10-21T09:00:01Z",
+    "finished_at": "2026-10-21T09:00:05Z",
+    "timeout_s": null,
+    "progress": null,
+    "code": null,
+    "message": null,
+    "artifacts": ["art_01J9ZE0000000000000000000C"]
+  }
+]

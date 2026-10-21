@@ -1,0 +1,18 @@
+{
+  "hostname": "steamdeck-fake",
+  "os_name": "SteamOS",
+  "os_version": "3.7.8",
+  "is_deckard": true,
+  "session_status": "gamescope",
+  "steam_status": "OS",
+  "steam_osclient_branch": "steamdeck-stable",
+  "steam_osclient_version": "1750000000",
+  "cef_debugging_enabled": false,
+  "renderdoc_layer_enabled": false,
+  "renderdoc_replay_server_running": false,
+  "user_password_is_set": true,
+  "steam_default_args": ["-steamdeck"],
+  "steam_current_args": ["-steamdeck", "-cef-enable-debugging"],
+  "steam_launch_flags": {"fullscreen": "1"},
+  "raw": {"unparsed_extra": "preserved", "numeric_extra": 42}
+}

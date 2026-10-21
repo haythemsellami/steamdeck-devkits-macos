@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "context": "mcp_stdio",
+  "platform": "darwin",
+  "arch": "arm64",
+  "python_version": "3.12.12",
+  "state_dir": "/var/folders/9n/z6d_38hj0wz2x0rpjp469y780000gn/T/devkit-probe-state-36v10ndf",
+  "tools": {
+    "rsync": {
+      "path": "/opt/homebrew/bin/rsync",
+      "flavor": "rsync",
+      "version": "3.5.1",
+      "protocol_version": 33,
+      "source": "homebrew",
+      "ok": true,
+      "message": null
+    },
+    "ssh_path": "/usr/bin/ssh",
+    "ssh_version": "OpenSSH_10.3p1",
+    "terminal": "iTerm2",
+    "filezilla": null
+  },
+  "checks": [
+    {
+      "name": "rsync",
+      "status": "ok",
+      "summary": "rsync 3.5.1 (protocol 33) at /opt/homebrew/bin/rsync",
+      "details": {
+        "path": "/opt/homebrew/bin/rsync",
+        "source": "homebrew"
+      }
+    },
+    {
+      "name": "ssh",
+      "status": "ok",
+      "summary": "OpenSSH_10.3p1 at /usr/bin/ssh",
+      "details": {
+        "path": "/usr/bin/ssh"
+      }
+    },
+    {
+      "name": "python",
+      "status": "ok",
+      "summary": "python 3.12.12",
+      "details": {}
+    },
+    {
+      "name": "platform",
+      "status": "ok",
+      "summary": "darwin arm64",
+      "details": {}
+    },
+    {
+      "name": "state-dir",
+      "status": "ok",
+      "summary": "state dir /var/folders/9n/z6d_38hj0wz2x0rpjp469y780000gn/T/devkit-probe-state-36v10ndf is writable",
+      "details": {
+        "path": "/var/folders/9n/z6d_38hj0wz2x0rpjp469y780000gn/T/devkit-probe-state-36v10ndf"
+      }
+    },
+    {
+      "name": "terminal",
+      "status": "ok",
+      "summary": "interactive shells via iTerm2",
+      "details": {}
+    },
+    {
+      "name": "local-network",
+      "status": "unknown",
+      "summary": "Local Network permission is not programmatically readable on macOS. mDNS discovery from a bundled app or an MCP host (e.g. a desktop assistant) may be silently blocked until the responsible host app is granted access under System Settings > Privacy & Security > Local Network. Connecting by hostname/IP always works.",
+      "details": {}
+    }
+  ]
+}

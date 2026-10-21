@@ -1,0 +1,8 @@
+{
+  "files_added": 3,
+  "files_changed": 1,
+  "files_deleted": 0,
+  "bytes_to_transfer": 54321,
+  "sample_changes": [">f+++++++++ run.sh", ">f+++++++++ assets/logo.png"],
+  "warnings": ["no entrypoint configured"]
+}

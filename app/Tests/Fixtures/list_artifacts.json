@@ -1,0 +1,17 @@
+[
+  {
+    "artifact": {
+      "id": "art_01J9ZE0000000000000000000C",
+      "job_id": "job_01J9ZE0000000000000000000B",
+      "device": "fake-deck",
+      "kind": "screenshot",
+      "path": "/state/artifacts/art_01J9ZE0000000000000000000C/shot.png",
+      "bytes": 69,
+      "sha256": "b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640",
+      "media_type": "image/png",
+      "remote_source": "/tmp/screenshot.png",
+      "created_at": "2026-10-21T09:00:05Z"
+    },
+    "resource_uri": "devkit://artifact/art_01J9ZE0000000000000000000C"
+  }
+]

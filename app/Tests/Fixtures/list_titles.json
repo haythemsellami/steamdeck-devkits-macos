@@ -1,0 +1,14 @@
+[
+  {
+    "gameid": "fake_game",
+    "registered_with_steam": true,
+    "size_bytes": 12345,
+    "modified": "2026-10-20T12:00:00Z"
+  },
+  {
+    "gameid": "zz_smoke",
+    "registered_with_steam": null,
+    "size_bytes": null,
+    "modified": null
+  }
+]
