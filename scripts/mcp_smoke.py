@@ -51,9 +51,7 @@ async def wait_job(session: ClientSession, job_id: str, timeout_s: float = 180.0
     """Poll devkit_job_status until terminal."""
     deadline = asyncio.get_event_loop().time() + timeout_s
     while True:
-        info = structured(
-            await session.call_tool("devkit_job_status", {"job_id": job_id}, None)
-        )
+        info = structured(await session.call_tool("devkit_job_status", {"job_id": job_id}, None))
         if info["state"] in ("succeeded", "failed", "cancelled", "timeout", "interrupted"):
             return info
         if asyncio.get_event_loop().time() > deadline:
