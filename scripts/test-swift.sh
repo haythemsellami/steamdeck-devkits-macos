@@ -3,6 +3,9 @@
 # bridge (no Xcode/SPM/XCTest). Steps: validate fixtures against the real
 # pydantic models, probe a compatible SDK, compile app/Sources/Bridge +
 # app/Tests (plus app/Sources/App minus the @main entry when present), run.
+# Extra arguments pass through to the test binary: `--hardware-only` runs just
+# the hardware-gated group (needs DEVKIT_TEST_DEVICE, from a Terminal.app
+# session — tmux shells fail LAN contact with errno 65).
 #
 # Idempotent: app/.build-tests is rebuilt in place every run.
 set -euo pipefail
@@ -83,5 +86,5 @@ swiftc \
     -o "$OUT_BIN" \
     ${SOURCES[@]+"${SOURCES[@]}"}
 
-echo "==> test-swift: running $OUT_BIN"
-"$OUT_BIN"
+echo "==> test-swift: running $OUT_BIN $*"
+"$OUT_BIN" "$@"

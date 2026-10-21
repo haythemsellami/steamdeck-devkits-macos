@@ -1,7 +1,9 @@
 import Foundation
 
 // CLT-only test runner: executes every registered group sequentially, prints
-// PASS/FAIL per test, exits 1 on any failure.
+// PASS/FAIL per test, exits 1 on any failure. Hardware-gated tests print SKIP
+// and pass when DEVKIT_TEST_DEVICE is unset; `--hardware-only` runs just the
+// hardware group (the integrator's real-Deck driver uses it).
 
 actor TestResults {
     private(set) var passed = 0
@@ -25,8 +27,13 @@ func runGroup(_ group: String, tests: [(String, () async throws -> Void)], into 
 }
 
 let results = TestResults()
-await runGroup("bridge", tests: AllTests.bridgeTests, into: results)
-await runGroup("viewmodel", tests: AllTests.viewModelTests, into: results)
+if CommandLine.arguments.contains("--hardware-only") {
+    await runGroup("hardware", tests: AllTests.hardwareTests, into: results)
+} else {
+    await runGroup("bridge", tests: AllTests.bridgeTests, into: results)
+    await runGroup("viewmodel", tests: AllTests.viewModelTests, into: results)
+    await runGroup("hardware", tests: AllTests.hardwareTests, into: results)
+}
 
 let passed = await results.passed
 let failures = await results.failures

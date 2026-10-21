@@ -39,6 +39,16 @@ final actor MCPBridge: DevkitBridge {
         self.progressContinuation = continuation
     }
 
+    /// Default per-call timeout (60 s); discover/pair add their own margins.
+    /// Hardware runs raise this via `setCallTimeout` — first-contact
+    /// ensure_utils uploads take seconds and device ops can be slow.
+    private var callTimeout: TimeInterval = MCPBridge.defaultTimeout
+
+    /// Test/integrator knob: override the default per-call timeout.
+    func setCallTimeout(_ timeout: TimeInterval) {
+        callTimeout = timeout
+    }
+
     func connect() async throws {
         _ = try await ensureConnected()
     }
@@ -325,12 +335,13 @@ final actor MCPBridge: DevkitBridge {
         _ type: T.Type,
         _ name: String,
         args: [String: JSONValue] = [:],
-        timeout: TimeInterval = MCPBridge.defaultTimeout,
+        timeout: TimeInterval? = nil,
         progressToken: String? = nil
     ) async throws -> T {
+        let effectiveTimeout = timeout ?? callTimeout
         let client = try await ensureConnected()
         let outcome = try await client.callTool(
-            name: name, arguments: args, timeout: timeout, progressToken: progressToken)
+            name: name, arguments: args, timeout: effectiveTimeout, progressToken: progressToken)
         if outcome.isError { throw Self.mapToolError(outcome, tool: name) }
         return try Self.decodePayload(type, from: outcome, tool: name)
     }

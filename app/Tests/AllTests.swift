@@ -33,6 +33,14 @@ enum AllTests {
         ("realServerHostOnly", testRealServerHostOnly),
     ]
 
+    // Hardware-gated flow (DEVKIT_TEST_DEVICE); skips pass when unset.
+    // Driven by the integrator from a Terminal.app session (TCC grant) via
+    // `scripts/test-swift.sh --hardware-only`.
+    nonisolated(unsafe) static var hardwareTests: [(String, () async throws -> Void)] = [
+        ("connectivity", testHardwareConnectivity),
+        ("milestoneFlow", testHardwareMilestoneFlow),
+    ]
+
     nonisolated(unsafe) static var viewModelTests: [(String, () async throws -> Void)] = [
         ("devicesLoadAndSelect", DevicesVMTests.devicesLoadAndSelect),
         ("pairSuccessAddsDevice", DevicesVMTests.pairSuccessAddsDevice),
