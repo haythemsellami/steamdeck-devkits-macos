@@ -8,8 +8,11 @@ import Foundation
 
 enum BridgeSetup {
     static func makeProductionBridge() -> any DevkitBridge {
-        // INTEGRATOR-REPLACE: return MCPBridge(launch: BridgeLaunchConfig(...))
-        // once Bridge/Internal ships; keep MockBridge as the fallback.
+        // INTEGRATOR-REPLACE: MCPBridge landed in Bridge/Internal — swap to
+        //   MCPBridge(launchConfig: BridgeLaunchConfig.fromEnvironment())
+        // (or .dev(repoRoot:) / .bundled(resources:) per packaging), keeping
+        // MockBridge as the no-server fallback. Verify Transport.swift is
+        // settled (it was mid-edit by the bridge agent when this was written).
         MockBridge(scenario: .populated)
     }
 }
