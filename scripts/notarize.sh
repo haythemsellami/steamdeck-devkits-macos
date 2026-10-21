@@ -7,7 +7,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="$REPO_ROOT/app/build/SteamOSDevkit.app"
-ZIP_PATH="$REPO_ROOT/app/build/DevkitSpike-notarize.zip"
+ZIP_PATH="$REPO_ROOT/app/build/SteamOSDevkit-notarize.zip"
 PROFILE="${NOTARY_PROFILE:-devkit-notarize}"
 
 print_instructions() {
