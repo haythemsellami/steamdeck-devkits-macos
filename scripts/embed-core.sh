@@ -12,8 +12,10 @@
 #      these flags ever change, the fallback is
 #      `uv pip compile pyproject.toml` against the lock.
 #   3. `<embedded cache python> -m pip install --no-compile --target
-#      python-packages -r requirements-bundle.txt <wheel>` — network access at
-#      BUILD time is fine; the installed tree runs fully offline.
+#      python-packages -r requirements-bundle.txt`, then a second invocation
+#      for the wheel itself with --no-deps (hash mode covers the file, so the
+#      unhashed local wheel must install separately — see the inline note).
+#      Network access at BUILD time is fine; the installed tree runs offline.
 #
 # Launch-shape contract (the GUI/bridge codes against this): `pip install
 # --target` creates NO console scripts, so the app spawns
