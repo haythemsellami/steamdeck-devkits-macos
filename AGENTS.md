@@ -19,7 +19,11 @@ uv run pytest --cov=steamos_devkit --cov-report=term-missing   # with coverage
 uv run ruff check . && uv run ruff format --check .
 uv run mypy src                  # strict; _vendor excluded via overrides
 scripts/run-gates.sh             # all of the above, same as CI
+scripts/test-swift.sh            # Swift GUI tests (fixtures + bridge + view models; CLT swiftc)
+scripts/package-app.sh           # build → embed → bundle → sign SteamOSDevkit.app
 ```
+
+Swift GUI conventions: `-swift-version 6` strict concurrency, macOS 14 target, no Xcode/SPM/XCTest on the build machine (custom harness in `app/Tests/`); `app/Sources/Bridge/DevkitBridge.swift` is the integrator-owned GUI↔core contract — feature agents report gaps instead of editing it.
 
 Coverage gate: ≥ 85% on `src/steamos_devkit/` excluding `_vendor/` (configured in `pyproject.toml`, enforced in CI).
 
@@ -30,7 +34,7 @@ Hardware tests: `tests/hardware/` runs only when `DEVKIT_TEST_DEVICE=<name-or-ip
 - `src/steamos_devkit/` — package (`core.py`, `models.py`, `errors.py`, `config.py`, `constants.py`, `device.py`, `artifacts.py`, `jobs/`, `adapters/`, `cli/`, `mcp_server.py`, `_vendor/`)
 - `tests/` — `unit/`, `integration/` (fake-SSH harness), `hardware/`, `fixtures/` (golden files)
 - `scripts/` — `sync-upstream.sh`, `run-gates.sh`, packaging/notarization scripts
-- `app/` — SwiftUI GUI + packaging (from M7; spike scaffolding from M0.5)
+- `app/` — SwiftUI GUI: `Sources/Bridge/` (contract + MCP stdio client), `Sources/App/` (UI, zero device logic), `Tests/` (custom harness), packaging plists
 - `docs/` — audit, decisions, technical spec, hardware matrix, packaging spike notes
 - `upstream/` — audit-only clone of Valve's repo, **gitignored**
 

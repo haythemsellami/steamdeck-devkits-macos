@@ -93,17 +93,23 @@ src/steamos_devkit/
 scripts/
   sync-upstream.sh        # re-fetch + re-apply patch series
   run-gates.sh            # ruff + mypy + pytest --cov, same as CI
-  build-app.sh            # M0.5 spike: swiftc .app build
-  embed-python.sh         # M0.5 spike: pinned python-build-standalone into the bundle
-  bundle-rsync.sh         # M0.5 spike: rsync 3.x + dylib closure into the bundle
-  sign.sh                 # M0.5 spike: hardened-runtime signing (Developer ID or ad-hoc)
-  notarize.sh             # M0.5 spike: notarytool submission via keychain profile
+  test-swift.sh           # Swift harness: fixture validation + bridge/VM/hardware tests
+  build-app.sh            # swiftc build of app/Sources → SteamOSDevkit.app
+  embed-python.sh         # pinned python-build-standalone into the bundle
+  embed-core.sh           # core wheel + pinned deps → Resources/python-packages
+  bundle-rsync.sh         # rsync 3.x + dylib closure into the bundle
+  sign.sh                 # inside-out hardened-runtime signing (Developer ID or ad-hoc)
+  notarize.sh             # notarytool submission via keychain profile
+  package-app.sh          # one-shot pipeline + sealed-fingerprint fast path
+  mcp_smoke.py            # model-agnostic MCP stdio smoke driver (hardware runs)
+  run-hardware-matrix.sh  # Terminal.app driver for hardware runs (TCC, appendix A)
 patches/                  # quilt-style series applied by sync-upstream.sh
 tests/
   unit/
   integration/            # mocked SSH
   hardware/               # marked, skipped without DEVKIT_TEST_DEVICE
-app/                      # SwiftUI Xcode project (M7)
+app/                      # SwiftUI GUI (section 17): Sources/{Bridge,App}, Tests,
+                          # Info.plist/entitlements; swiftc-built, no .xcodeproj
 docs/
   overview.md is at repo root; this file; audit; decisions
 ```
@@ -519,6 +525,16 @@ Sequencing note: M0.5 runs in parallel with M1–M2; if the spike fails, D2's fa
 
 Emulator, SteamOS fork, game manager, reverse engineering, automatic optimization; full Steam-library access (devkit titles only); Windows/Proton binary porting; local analysis of captures (gpuvis/RGP/qrenderdoc are off-platform viewers); stop-title and readiness signals until device-side support exists; Ed25519 pairing keys (device-side verification pending); IPv6 discovery.
 
+## 17. GUI (SwiftUI, M7)
+
+- **Layout**: `app/Sources/Bridge/DevkitBridge.swift` is the integrator-owned contract — DTOs mirroring `models.py`, `BridgeError`, and the `DevkitBridge` protocol (one method per §11 tool, same names minus the `devkit_` prefix). `app/Sources/Bridge/Internal/` is the real MCP client; `app/Sources/App/` is the UI (zero device logic); `app/Tests/` + `scripts/test-swift.sh` are the test harness.
+- **Bridge** (D6): hand-rolled MCP stdio client — newline-delimited JSON-RPC 2.0 over a spawned `Process`, actor-isolated. Launch modes: bundled (`Contents/Resources/python/bin/python3 -c "from steamos_devkit.cli.mcp import run; run()"` with `PYTHONPATH`=python-packages and `DEVKIT_RSYNC`=Resources/bin/rsync), dev (`uv run devkit-mcp`), and a `DEVKIT_MCP_COMMAND` override; resolved by `BridgeLaunchConfig.fromEnvironment()`.
+- **Wire facts** (verified empirically against the real server, mcp SDK 2.3.0, 2026-10-21): the initialize handshake negotiates protocolVersion `2025-06-18`; successful tool results always carry `structuredContent` (array payloads wrapped as `{"result": [...]}`); `isError` text is **prefixed** (`"Error executing tool <name>: "`) before the DevkitError payload JSON — clients parse from the first `{`; `resources/read` failures are JSON-RPC error responses (-32602), not isError results.
+- **Progress**: job-starting calls carry a client-generated `gui-<uuid>` progressToken in `_meta`; the connection-level `notifications/progress` stream (§11) is republished as one `AsyncStream<ProgressNotification>`; the app correlates token → job id and merges with a 1 s `jobStatus` poll fallback (covers jobs not started by this UI process; push wins for tokens it owns).
+- **UI**: Devices (registry, mDNS discover, pair with on-device-approval guidance), Device detail (status, capabilities with honest operation labels, controls: steam mode/session/reload, perf overlay/frametimes/renderdoc toggles, renderdoc server, proton logging), Titles (configure form with leave-unchanged semantics, launch, typed-confirmation delete), Deploy (source dir, live gameid validation incl. reserved ids, filters, checksum/update exclusivity, preview → job with live progress), Jobs, Artifacts (text excerpt or image preview via the artifact resource; Reveal/Open in Finder), Doctor, Onboarding empty state. Client-side validation mirrors `constants.py` and never replaces server validation.
+- **Testing** (CLT-only, no XCTest/swift-testing — D6): custom swiftc-compiled harness; fixtures captured from the real server and validated against the pydantic models (`app/Tests/Fixtures/validate.py`); a fake MCP stdio server covers protocol edges (out-of-order responses, malformed lines, transport death, error shapes); a host-only real-server integration test proves wire compatibility; hardware flow tests gate on `DEVKIT_TEST_DEVICE`. `#Preview` macros require Xcode's PreviewsMacros plugin — previews use `PreviewProvider` + MockBridge scenarios.
+- **Packaging**: `scripts/package-app.sh` (build → embed-python → embed-core → bundle-rsync → sign) with a sealed-fingerprint fast path; `notarize.sh` needs the user's Developer ID + keychain profile (spike doc). The GUI bundle is its own TCC responsible process — it does not inherit the terminal/tmux Local Network trap and prompts for Local Network on first device contact. Bundle id `dev.steamosdevkit.mac` is still the placeholder; replace with a controlled domain before distribution.
+
 ## Appendix A — ratified implementation deltas (2026-10-19, wave-1 review)
 
 - §1: the `devkit-mcp` console script is registered at M4, when `mcp_server.py` lands (not M0).
@@ -568,7 +584,7 @@ Reviewed codebase at 902e3d6; verified each finding against the tree before fixi
 - §3: artifact meta.json writes are atomic (tmp + os.replace); unparseable metas are skipped in listings; legacy key import creates keys O_EXCL at mode 0400.
 - §10/cli: per-module helper duplicates promoted into `cli/common.py` (L1) — `shift_optional_selector` (the `<sel> <value>` positional shuffle), `run_job` (submit / `--no-wait` / wait), `artifact_paths_human`, `tail_text_bounded` (the `read_artifact_excerpt` bounds applied to files inside directory artifacts, which the artifact-store function itself rejects), `emit_result`; `resolve_selector` is the single selector helper. `deploy --no-wait` JSON now reports `"status": "queued"` like the other job commands and the MCP surface.
 - §2: architecture diagram corrected (A1) — DevkitCore speaks the audited protocol directly via `DeviceHandle` (paramiko/rsync/zeroconf). The vendored client core (`_vendor/devkit_client/`) is reference-only: never imported by production code, parity-tested for importability in `tests/unit/test_vendor.py`. Only `_vendor/devkit-utils/` is consumed, rsynced verbatim to devices by `DeviceHandle.ensure_utils`. See the D1 addendum (2026-10-20) in `docs/decisions.md`.
-- D4 follow-through: rsync GPLv3 attribution landed — `LICENSES/rsync-GPLv3.txt` (verbatim from upstream's `third-party-licenses/GPL-3.txt`) plus the source offer in `LICENSES/README.md`. The python-build-standalone runtime's own license notices remain pending (to be added when the runtime ships in a distributed build); tracked in `docs/packaging-spike.md`.
+- D4 follow-through: rsync GPLv3 attribution landed — `LICENSES/rsync-GPLv3.txt` (verbatim from upstream's `third-party-licenses/GPL-3.txt`) plus the source offer in `LICENSES/README.md`. The embedded Python runtime's notices landed later (2026-10-21, `LICENSES/python-runtime/`).
 - §4/`ensure_utils`: devkit-utils sync is cached once per process per (state root, device) with `force=True` to bypass, matching upstream's once-per-identify cadence; failed syncs are never cached (M3). Consequently MCP `read_only_hint`s were corrected: doctor/status/list_titles/inspect_title/capabilities are NOT read-only (first contact uploads helpers); the honest read-only set is discover, list_devices, preview_deploy, job_status, list_jobs, list_artifacts, read_artifact (M4).
 - §8: `Title.registered_with_steam` is now `bool | None` — always None today because the device helpers cannot observe Steam registration (L2); sidecar reads distinguish "No such file" (absent) from other failures (REMOTE_COMMAND_FAILED) (L3); discovery maps only permission-shaped errno (EPERM/EACCES) to PERMISSION_LOCAL_NETWORK, other network failures to DEVICE_UNREACHABLE (L4); selectors accept `host:port` with range validation (L5); successful status refreshes registry `family` (L6); Deck screenshot poll loop restructured (L12).
 - §6/`DeviceHandle.run`: default 120 s per-command deadline when no explicit timeout is passed; `ensure_utils` local rsync capped at 300 s, mapping to TIMEOUT (M7 device half). `JobContext` gains `time_remaining()`/`deadline_exceeded`, `sleep` caps at the deadline, and `run_process(timeout_s=...)` kills the child group with TIMEOUT semantics (M7 jobs half).
@@ -578,3 +594,12 @@ Reviewed codebase at 902e3d6; verified each finding against the tree before fixi
 
 - Errno 65 (EHOSTUNREACH) on darwin is the macOS Local Network (TCC) denial signature for unsigned processes on LAN connects — verified against a real Deck (unicast TCP failed with 65 for Python while Apple-signed curl/nc passed; internet unaffected). `errors.map_network_oserror` maps it to PERMISSION_LOCAL_NETWORK with dual-cause guidance (offline device OR blocked permission), applied in pairing (properties + register), device SSH connect, and discovery's errno table. URLError's wrapped `.reason` is unwrapped before classification.
 - §10: new `devkit setup [--no-install] [--no-probe]` — one-shot onboarding: state layout, keypair generation (0400), rsync 3.x check with Homebrew install when missing, ssh/terminal probes, and on macOS a short mDNS probe that surfaces the Local Network prompt before first pairing. Exit 0 when no step errored, else 5. Added to the capabilities matrix as a host-local operation.
+
+### M7 GUI wave (2026-10-21)
+
+- §17 added: the SwiftUI GUI on the MCP bridge is implemented (`app/Sources/{Bridge,App}`, contract-owned DTOs, zero device logic). The §11 wire facts above were verified against the real server: protocolVersion `2025-06-18`; isError text prefixed `Error executing tool <name>: `; `structuredContent` always present on success with arrays wrapped `{"result": [...]}`; `resources/read` failures are JSON-RPC -32602, not isError.
+- §2.1: pipeline scripts finalized (`embed-core.sh`, `package-app.sh`, `test-swift.sh` added; "M0.5 spike" labels dropped); the GUI is swiftc-built — no Xcode project exists (the earlier layout note was aspirational).
+- D4 follow-through closed: embedded Python runtime license notices extracted to `LICENSES/python-runtime/` (23 files from the pinned python-build-standalone tarball).
+- CLT-only toolchain constraints discovered and recorded for future agents: `#Preview` macros need Xcode's PreviewsMacros plugin (`PreviewProvider` used instead); `FileHandle.bytes.lines` never delivers in this configuration (`readabilityHandler` used); all GUI sources compile under `-swift-version 6` strict concurrency.
+- M0.5 spike shell retired: `DevkitSpike.swift` deleted; the pipeline scripts carry no spike-specific logic. `notarize.sh` targets `SteamOSDevkit.app`.
+- Bundle id remains the placeholder `dev.steamosdevkit.mac` — replace with a controlled domain before notarized distribution (dev runs are unaffected).

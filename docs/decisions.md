@@ -83,3 +83,13 @@ Results: all core APIs return typed, JSON-serializable result objects (status, d
 | Env/deps | uv + lockfile; Homebrew rsync 3.x (bundled in .app) |
 | Quality | ruff, mypy, pytest, hardware test matrix |
 | Packaging | signed + notarized .app (Developer ID), spike before GUI build |
+
+## D6 — GUI bridge: hand-rolled minimal MCP client in Swift; CLT-only testing (2026-10-21)
+
+**Decision:** The GUI talks to the core through a small hand-rolled MCP stdio client in Swift (newline-delimited JSON-RPC 2.0; initialize/tools/resources + connection-level `notifications/progress`), behind the `DevkitBridge` protocol in `app/Sources/Bridge/DevkitBridge.swift` — not a Swift Package dependency on the official Swift MCP SDK.
+
+Rationale: the build machine and pipeline are CLT-only `swiftc` (no Xcode, no SwiftPM); our surface is fixed and fully known (the §11 tools, four resource patterns, progress notifications); and the protocol seam already isolates the UI, so adopting the official Swift SDK later is a drop-in replacement, not a rewrite. The client is validated against the real `devkit-mcp` server, and fixtures are validated against the pydantic models themselves, so drift fails loudly.
+
+Testing consequence: the CLT ships neither XCTest nor swift-testing, so Swift tests run through a custom swiftc-compiled harness (`app/Tests/` + `scripts/test-swift.sh`): fake MCP stdio server for protocol edges, real-server host-only integration, hardware-gated milestone-flow tests behind `DEVKIT_TEST_DEVICE`.
+
+Reversible: yes — at the `DevkitBridge` protocol boundary.

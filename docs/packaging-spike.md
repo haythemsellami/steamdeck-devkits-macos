@@ -1,5 +1,12 @@
 # M0.5 Packaging/Notarization Spike — Results
 
+> **M7 update (2026-10-21):** this document is the historical spike record. The
+> production pipeline is the same five scripts generalized plus two new ones —
+> `scripts/embed-core.sh` (core wheel + pinned deps into the bundle) and
+> `scripts/package-app.sh` (one-shot with a sealed-fingerprint fast path) —
+> building `app/build/SteamOSDevkit.app`. The python-runtime license notices
+> marked pending below landed in `LICENSES/python-runtime/`. See spec §17.
+
 Date: 2026-10-19. Machine: macOS 26.7.1 (25G241), arm64, Xcode CLT only (Apple Swift 6.3.3), Homebrew rsync 3.5.1 at `/opt/homebrew/bin/rsync`. **No Apple Developer credentials on this machine.**
 
 Purpose: prove decision D2's riskiest claim — a SwiftUI app embedding a Python runtime and a bundled rsync 3.x, code-signed with hardened runtime, ready for notarization.

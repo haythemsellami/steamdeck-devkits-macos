@@ -2,9 +2,9 @@
 
 An open-source SteamOS Devkit client for macOS (Apple Silicon first): pair
 your Mac with a Steam Deck or Steam Frame, then deploy builds, launch titles,
-pull logs and screenshots, and drive profiling from a scriptable CLI or an
-MCP server. One shared typed core (`DevkitCore`) powers the CLI, the MCP
-server, and (later) a SwiftUI GUI — no frontend contains device logic.
+pull logs and screenshots, and drive profiling from a scriptable CLI, an
+MCP server, or a native SwiftUI app. One shared typed core (`DevkitCore`)
+powers all three — no frontend contains device logic.
 
 Upstream protocol and device-side helpers come from Valve's
 [steamos-devkit](https://gitlab.steamos.cloud/devkit/steamos-devkit): the
@@ -15,10 +15,12 @@ protocol is implemented directly from the audited upstream source
 
 ## Status
 
-**Pre-1.0.** The CLI/MCP surface and core are implemented; hardware validation
-is pending — no operation reports `supported_tested` until
-[`docs/hardware-matrix.md`](docs/hardware-matrix.md) records it green on a
-real device. Interfaces may still change between milestones.
+**Pre-1.0.** Milestone 1 is green on real hardware for the CLI and the MCP
+surface (run 1 in [`docs/hardware-matrix.md`](docs/hardware-matrix.md): pair,
+status, deploy, launch, logs, screenshot, failure modes). The SwiftUI GUI is
+built and packaged (ad-hoc signed; Developer ID notarization is pending
+credentials). Operations only report `supported_tested` once the matrix
+records them green — everything else stays honestly `supported_untested`.
 
 ## Requirements
 
@@ -59,6 +61,20 @@ devkit logs --kind steam                 # lands as an artifact with an excerpt
 devkit screenshot --mode 3               # full gamescope composition -> PNG
 devkit perf-overlay on                   # MangoHud; `off` to disable
 ```
+
+## GUI app
+
+```bash
+scripts/package-app.sh       # build → embed Python+core → bundle rsync → sign
+open app/build/SteamOSDevkit.app
+```
+
+The app embeds its own Python runtime, the core wheel with pinned deps, and
+rsync 3.x — nothing else to install. It spawns the MCP server as a subprocess
+and renders from it; the bundle is its own macOS privacy identity, so Local
+Network prompts attach to the app itself (not your terminal). Dev builds are
+ad-hoc signed (Gatekeeper assessment fails by design until Developer ID
+notarization — see `docs/packaging-spike.md`).
 
 ## MCP server
 
@@ -104,7 +120,7 @@ short probe to surface the prompt early.
 
 - [`overview.md`](overview.md) — product direction and agreed architecture
 - [`docs/audit-upstream.md`](docs/audit-upstream.md) — protocol evidence from the upstream source
-- [`docs/decisions.md`](docs/decisions.md) — locked decisions (D1–D5)
+- [`docs/decisions.md`](docs/decisions.md) — locked decisions (D1–D6)
 - [`docs/technical-spec.md`](docs/technical-spec.md) — authoritative build contract
 - [`docs/packaging-spike.md`](docs/packaging-spike.md) — notarized-bundle spike notes
 - [`docs/hardware-matrix.md`](docs/hardware-matrix.md) — recorded hardware runs
@@ -128,7 +144,6 @@ DEVKIT_TEST_DEVICE=deck uv run pytest tests/hardware -v
 
 MIT (this project). Third-party notices live in
 [`LICENSES/`](LICENSES/README.md): upstream steamos-devkit attribution
-(`upstream-steamos-devkit-MIT.txt`) and — for distributed builds that bundle
-rsync 3.x — the GPLv3 text with the source offer (`rsync-GPLv3.txt`). The
-embedded Python runtime's notices are still **pending**, tracked in
-[`docs/packaging-spike.md`](docs/packaging-spike.md).
+(`upstream-steamos-devkit-MIT.txt`), the GPLv3 text with the source offer for
+the bundled rsync 3.x (`rsync-GPLv3.txt`), and the embedded Python runtime's
+notices (`python-runtime/`).
