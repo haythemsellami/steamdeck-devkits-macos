@@ -119,6 +119,8 @@ short probe to surface the prompt early.
 ## Documentation map
 
 - [`overview.md`](overview.md) — product direction and agreed architecture
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute (gates, tests, commit style)
+- [`SECURITY.md`](SECURITY.md) — how to report security issues
 - [`docs/audit-upstream.md`](docs/audit-upstream.md) — protocol evidence from the upstream source
 - [`docs/decisions.md`](docs/decisions.md) — locked decisions (D1–D6)
 - [`docs/technical-spec.md`](docs/technical-spec.md) — authoritative build contract

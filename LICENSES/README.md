@@ -1,7 +1,7 @@
 # LICENSES — third-party notices carried by this repo
 
 License texts and notices for code/binaries we vend or redistribute. This
-project itself is MIT (see `pyproject.toml`).
+project itself is MIT (see the root `LICENSE` file).
 
 | File | Covers | Notes |
 |---|---|---|

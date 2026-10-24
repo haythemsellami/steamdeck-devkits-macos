@@ -4,6 +4,7 @@ dynamic = ["version"]
 description = "Open-source SteamOS Devkit client for macOS: CLI, MCP server, and shared core"
 requires-python = ">=3.11,<3.15"
 license = { text = "MIT" }
+authors = [{ name = "Haythem Sellami" }]
 dependencies = [
     "appdirs>=1.4.4",
     "mcp>=2.3.0",
